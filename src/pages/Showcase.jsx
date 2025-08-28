@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Baker, Gallery, Customer, Order, User, Theme } from '@/api/entities';
-import { GalleryInquiry } from '@/api/entities'; // Import new GalleryInquiry entity
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
@@ -15,9 +14,8 @@ import DesignUploader from '../components/showcase/DesignUploader';
 import ThemeSelector from '../components/showcase/ThemeSelector';
 import ThemeModeToggle from '../components/theme/ThemeModeToggle';
 import { useTheme } from '../providers/ThemeProvider';
-import moment from 'moment'; // Import moment for date handling
 
-export default function Showcase() {
+export default function Showcase({ isPublic = false }) {
     const { currentTheme, allThemes, isLoading: themeLoading, switchTheme } = useTheme();
     const [baker, setBaker] = useState(null);
     const [gallery, setGallery] = useState([]);
@@ -53,6 +51,12 @@ export default function Showcase() {
                 setGallery(galleryData);
                 setOrders(ordersData);
                 
+                // Apply the baker's selected theme if available and in public mode
+                if (isPublic && bakerData?.selected_theme_id) {
+                    console.log('Public mode: Applying baker selected theme:', bakerData.selected_theme_id);
+                    switchTheme(bakerData.selected_theme_id);
+                }
+                
             } catch (error) {
                 console.error("Error loading showcase data:", error);
                 toast.error("Could not load baker's showcase. Please try again later.");
@@ -72,7 +76,20 @@ export default function Showcase() {
 
         loadData();
         checkLoginStatus();
-    }, []); // Remove dependency on URL search since theme provider handles this now
+        
+        // Listen for baker data updates from other components
+        const handleBakerDataUpdate = (event) => {
+            console.log('Showcase: Baker data updated, reloading...', event.detail);
+            loadData(); // Reload all data when baker data changes
+        };
+        
+        window.addEventListener('bakerDataUpdated', handleBakerDataUpdate);
+        
+        // Cleanup event listener
+        return () => {
+            window.removeEventListener('bakerDataUpdated', handleBakerDataUpdate);
+        };
+    }, [isPublic, switchTheme]); // Dependencies for theme switching in public mode
     
     const handleInputChange = (field, value) => {
         setFormData(prev => ({...prev, [field]: value}));
@@ -145,38 +162,10 @@ export default function Showcase() {
     };
 
     const handleOrderClick = async (galleryItem) => {
-        // First, pre-fill form and scroll for a smooth user experience
-        setFormData(prev => ({
-            ...prev,
-            cake_description: `Inquiry for "${galleryItem.title}" cake.`,
-            inspiration_images: galleryItem.image_url ? [galleryItem.image_url] : []
-        }));
-        document.getElementById('consultation').scrollIntoView({ behavior: 'smooth' });
-
-        // Then, handle the inquiry counting logic
-        if (!isLoggedIn) {
-            toast.info("Please log in to track your inquiry. The form is pre-filled for you!");
-            return;
-        }
-
         try {
-            const currentUser = await User.me();
-            const startOfDay = moment().startOf('day').toISOString();
-            
-            const existingInquiry = await GalleryInquiry.filter({
-                user_id: currentUser.id,
-                gallery_item_id: galleryItem.id,
-                created_date_gte: startOfDay, // Check if inquiry was made today
-            });
-
-            if (existingInquiry.length > 0) {
-                toast.info("Your interest is noted! The form has been pre-filled for you again.");
-                return; // User has already inquired today, do not increment
-            }
-
-            // User has not inquired today, so proceed
+            // First, update the inquiry count (just like hearts)
             const newInquiryCount = (galleryItem.inquiries_count || 0) + 1;
-
+            
             // Optimistic UI update
             setGallery(prev => prev.map(item =>
                 item.id === galleryItem.id
@@ -184,28 +173,37 @@ export default function Showcase() {
                     : item
             ));
 
-            // Create a record of the inquiry and update the count in parallel
-            await Promise.all([
-                GalleryInquiry.create({
-                    user_id: currentUser.id,
-                    gallery_item_id: galleryItem.id,
-                }),
-                Gallery.update(galleryItem.id, {
-                    inquiries_count: newInquiryCount
-                })
-            ]);
+            // Update database
+            await Gallery.update(galleryItem.id, {
+                inquiries_count: newInquiryCount
+            });
             
-            toast.success("Thanks for your interest! The form is pre-filled below.");
+            // Then, pre-fill form and scroll for a smooth user experience
+            setFormData(prev => ({
+                ...prev,
+                cake_description: `Inquiry for "${galleryItem.title}" cake.`,
+                inspiration_images: galleryItem.image_url ? [galleryItem.image_url] : []
+            }));
+            
+            toast.success("Thanks for your interest! The form is pre-filled below.", {
+                duration: 2000,
+                position: "top-center"
+            });
+            
+            // Scroll to form after a brief delay
+            setTimeout(() => {
+                document.getElementById('consultation').scrollIntoView({ behavior: 'smooth' });
+            }, 200);
 
         } catch (error) {
             console.error('Error handling inquiry click:', error);
-            toast.error("Could not record inquiry. Please proceed with the form.");
-            // Revert optimistic update on error if needed
+            // Revert optimistic update on error
             setGallery(prev => prev.map(item =>
                 item.id === galleryItem.id
                     ? { ...item, inquiries_count: galleryItem.inquiries_count }
                     : item
             ));
+            toast.error("Couldn't record interest. Please try again.");
         }
     };
 
@@ -426,7 +424,7 @@ export default function Showcase() {
         
         <Toaster richColors position="top-right" />
         
-        {isLoggedIn && (
+        {isLoggedIn && !isPublic && (
             <>
                 <div className="fixed top-4 left-4 z-[100]">
                     <Button asChild className="bg-primary text-primary-foreground font-medium shadow-xl rounded-[calc(var(--radius)-4px)] px-6 py-3 hover:scale-[var(--btn-hover-scale)] transition-all duration-[var(--transition-speed)] backdrop-blur-sm">
@@ -462,7 +460,7 @@ export default function Showcase() {
                     >
                         Book Consultation
                     </Button>
-                    <ThemeModeToggle className="text-foreground" />
+                    {!isPublic && <ThemeModeToggle className="text-foreground" />}
                 </div>
             </div>
         </nav>

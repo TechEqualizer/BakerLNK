@@ -49,11 +49,32 @@ export default function Layout({ children, currentPageName }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     useEffect(() => {
-        Baker.list().then(bakers => {
-            if (bakers.length > 0) {
-                setBaker(bakers[0]);
-            }
-        });
+        const loadBakerData = () => {
+            Baker.list().then(bakers => {
+                if (bakers.length > 0) {
+                    console.log('Layout: Loading baker data:', bakers[0]);
+                    setBaker(bakers[0]);
+                }
+            });
+        };
+        
+        loadBakerData();
+        
+        // Listen for baker data updates from Settings page
+        const handleBakerDataUpdate = (event) => {
+            console.log('Layout: Baker data updated, reloading...', event.detail);
+            // Force a reload after a small delay to ensure backend is updated
+            setTimeout(() => {
+                loadBakerData();
+            }, 500);
+        };
+        
+        window.addEventListener('bakerDataUpdated', handleBakerDataUpdate);
+        
+        // Cleanup event listener
+        return () => {
+            window.removeEventListener('bakerDataUpdated', handleBakerDataUpdate);
+        };
     }, []);
 
     if (currentPageName === 'Showcase') {
@@ -64,13 +85,26 @@ export default function Layout({ children, currentPageName }) {
         <div className="admin-sidebar flex flex-col h-full bg-card border-r">
             <div className="p-6 text-center border-b border-border">
                 <Link to={createPageUrl('Dashboard')} className="flex flex-col items-center gap-2">
-                    {baker?.logo_url ? (
-                        <img src={baker.logo_url} alt="Logo" className="h-12 w-12 rounded-full object-cover" />
-                    ) : (
-                        <div className="h-12 w-12 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold text-xl">
+                    <div className="relative">
+                        {baker?.logo_url && (
+                            <img 
+                                src={baker.logo_url} 
+                                alt="Logo" 
+                                className="h-12 w-12 rounded-full object-cover" 
+                                onError={(e) => {
+                                    console.error('Failed to load logo image:', baker.logo_url, e);
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                }}
+                            />
+                        )}
+                        <div 
+                            className="h-12 w-12 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold text-xl fallback-logo" 
+                            style={{ display: baker?.logo_url ? 'none' : 'flex' }}
+                        >
                             {baker?.business_name ? baker.business_name.charAt(0) : 'B'}
                         </div>
-                    )}
+                    </div>
                     <h1 className="text-xl font-bold text-card-foreground mt-2">{baker?.business_name || 'BakerLink'}</h1>
                 </Link>
             </div>

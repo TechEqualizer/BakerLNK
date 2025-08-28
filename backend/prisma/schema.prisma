@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -27,16 +27,22 @@ model User {
 }
 
 model Baker {
-  id               String   @id @default(cuid())
-  userId           String   @unique @map("user_id")
-  businessName     String   @map("business_name")
-  tagline          String?
-  logoUrl          String?  @map("logo_url")
-  heroImageUrl     String?  @map("hero_image_url")
-  selectedThemeId  String?  @map("selected_theme_id")
-  leadTimeDays     Int      @default(7) @map("lead_time_days")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  id                 String   @id @default(cuid())
+  userId             String   @unique @map("user_id")
+  businessName       String   @map("business_name")
+  tagline            String?
+  description        String?
+  email              String?
+  phone              String?
+  location           String?
+  logoUrl            String?  @map("logo_url")
+  heroImageUrl       String?  @map("hero_image_url")
+  selectedThemeId    String?  @map("selected_theme_id")
+  leadTimeDays       Int      @default(7) @map("lead_time_days")
+  maxOrdersPerDay    Int?     @map("max_orders_per_day")
+  depositPercentage  Int?     @map("deposit_percentage")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   theme      Theme?       @relation(fields: [selectedThemeId], references: [id])
@@ -54,6 +60,8 @@ model Customer {
   name      String
   email     String?
   phone     String?
+  notes     String?
+  tags      String?  // Comma-separated tags for SQLite compatibility
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -69,15 +77,15 @@ model Order {
   bakerId          String    @map("baker_id")
   customerId       String    @map("customer_id")
   status           String    @default("inquiry")
-  eventDate        DateTime? @map("event_date") @db.Date
+  eventDate        DateTime? @map("event_date")
   eventType        String?   @map("event_type")
   servesCount      Int?      @map("serves_count")
-  budgetMin        Decimal?  @map("budget_min") @db.Decimal(10, 2)
-  budgetMax        Decimal?  @map("budget_max") @db.Decimal(10, 2)
+  budgetMin        Decimal?  @map("budget_min")
+  budgetMax        Decimal?  @map("budget_max")
   cakeDescription  String?   @map("cake_description")
   specialRequests  String?   @map("special_requests")
-  quotedPrice      Decimal?  @map("quoted_price") @db.Decimal(10, 2)
-  depositAmount    Decimal?  @map("deposit_amount") @db.Decimal(10, 2)
+  quotedPrice      Decimal?  @map("quoted_price")
+  depositAmount    Decimal?  @map("deposit_amount")
   depositPaid      Boolean   @default(false) @map("deposit_paid")
   bakerNotes       String?   @map("baker_notes")
   priority         String    @default("medium")
@@ -98,7 +106,7 @@ model Gallery {
   description      String?
   imageUrl         String   @map("image_url")
   category         String?
-  tags             String[]
+  tags             String?
   featured         Boolean  @default(false)
   priceRange       String?  @map("price_range")
   servesCount      Int?     @map("serves_count")

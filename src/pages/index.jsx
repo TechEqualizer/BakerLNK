@@ -66,6 +66,17 @@ function PagesContent() {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
     
+    // Check if this is a public route that shouldn't have admin layout
+    const isPublicRoute = location.pathname.startsWith('/public');
+    
+    if (isPublicRoute) {
+        return (
+            <Routes>
+                <Route path="/public" element={<Showcase isPublic={true} />} />
+            </Routes>
+        );
+    }
+    
     return (
         <Layout currentPageName={currentPage}>
             <Routes>            

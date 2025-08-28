@@ -48,7 +48,30 @@ router.get('/bakers', async (req: Request, res: Response, next: NextFunction) =>
     if (!baker) {
       return res.json([]);
     }
-    res.json([baker]);
+    
+    // Transform field names from camelCase to snake_case for frontend compatibility
+    const transformedBaker = {
+      id: baker.id,
+      user_id: baker.userId,
+      business_name: baker.businessName,
+      tagline: baker.tagline,
+      description: baker.description,
+      email: baker.email,
+      phone: baker.phone,
+      location: baker.location,
+      logo_url: baker.logoUrl,
+      hero_image_url: baker.heroImageUrl,
+      selected_theme_id: baker.selectedThemeId,
+      lead_time_days: baker.leadTimeDays,
+      max_orders_per_day: baker.maxOrdersPerDay,
+      deposit_percentage: baker.depositPercentage,
+      created_date: baker.createdAt,
+      updated_date: baker.updatedAt,
+      user: baker.user,
+      theme: baker.theme
+    };
+    
+    res.json([transformedBaker]);
   } catch (error) {
     next(error);
   }
@@ -71,7 +94,25 @@ router.get('/gallery', async (req: Request, res: Response, next: NextFunction) =
       skip: offset
     });
     
-    res.json(gallery);
+    // Transform field names from camelCase to snake_case for frontend compatibility
+    const transformedGallery = gallery.map(item => ({
+      id: item.id,
+      baker_id: item.bakerId,
+      title: item.title,
+      description: item.description,
+      image_url: item.imageUrl,
+      category: item.category,
+      tags: item.tags,
+      featured: item.featured,
+      price_range: item.priceRange,
+      serves_count: item.servesCount,
+      hearts_count: item.heartsCount,
+      inquiries_count: item.inquiriesCount,
+      created_at: item.createdAt,
+      updated_at: item.updatedAt
+    }));
+    
+    res.json(transformedGallery);
   } catch (error) {
     next(error);
   }

@@ -33,7 +33,8 @@ const parseQueryParams = (query: any) => {
     const fieldMap: { [key: string]: string } = {
       'created_date': 'createdAt',
       'updated_date': 'updatedAt',
-      'featured': 'featured'
+      'featured': 'featured',
+      'created_at': 'createdAt'
     };
     
     const actualField = fieldMap[field] || field;
@@ -77,7 +78,29 @@ router.get('/bakers', async (req: AuthenticatedRequest, res, next) => {
       }
     });
     
-    res.json(bakers);
+    // Transform field names from camelCase to snake_case for frontend compatibility
+    const transformedBakers = bakers.map(baker => ({
+      id: baker.id,
+      user_id: baker.userId,
+      business_name: baker.businessName,
+      tagline: baker.tagline,
+      description: baker.description,
+      email: baker.email,
+      phone: baker.phone,
+      location: baker.location,
+      logo_url: baker.logoUrl,
+      hero_image_url: baker.heroImageUrl,
+      selected_theme_id: baker.selectedThemeId,
+      lead_time_days: baker.leadTimeDays,
+      max_orders_per_day: baker.maxOrdersPerDay,
+      deposit_percentage: baker.depositPercentage,
+      created_date: baker.createdAt,
+      updated_date: baker.updatedAt,
+      user: baker.user,
+      theme: baker.theme
+    }));
+    
+    res.json(transformedBakers);
   } catch (error) {
     next(error);
   }
@@ -97,7 +120,29 @@ router.get('/bakers/:id', async (req, res, next) => {
       throw createError(404, 'Baker not found');
     }
     
-    res.json(baker);
+    // Transform field names from camelCase to snake_case for frontend compatibility
+    const responseData = {
+      id: baker.id,
+      user_id: baker.userId,
+      business_name: baker.businessName,
+      tagline: baker.tagline,
+      description: baker.description,
+      email: baker.email,
+      phone: baker.phone,
+      location: baker.location,
+      logo_url: baker.logoUrl,
+      hero_image_url: baker.heroImageUrl,
+      selected_theme_id: baker.selectedThemeId,
+      lead_time_days: baker.leadTimeDays,
+      max_orders_per_day: baker.maxOrdersPerDay,
+      deposit_percentage: baker.depositPercentage,
+      created_date: baker.createdAt,
+      updated_date: baker.updatedAt,
+      user: baker.user,
+      theme: baker.theme
+    };
+    
+    res.json(responseData);
   } catch (error) {
     next(error);
   }
@@ -112,16 +157,85 @@ router.put('/bakers/:id', async (req: AuthenticatedRequest, res, next) => {
       throw createError(403, 'Access denied');
     }
     
+    // Transform field names from snake_case to camelCase for database
+    const transformedData: any = {};
+    Object.entries(req.body).forEach(([key, value]) => {
+      switch (key) {
+        case 'business_name':
+          transformedData.businessName = value;
+          break;
+        case 'logo_url':
+          transformedData.logoUrl = value;
+          break;
+        case 'hero_image_url':
+          transformedData.heroImageUrl = value;
+          break;
+        case 'selected_theme_id':
+          transformedData.selectedThemeId = value;
+          break;
+        case 'lead_time_days':
+          transformedData.leadTimeDays = value;
+          break;
+        case 'max_orders_per_day':
+          transformedData.maxOrdersPerDay = value;
+          break;
+        case 'deposit_percentage':
+          transformedData.depositPercentage = value;
+          break;
+        // Keep fields that are already correctly named
+        case 'tagline':
+        case 'description':
+        case 'email':
+        case 'phone':
+        case 'location':
+          transformedData[key] = value;
+          break;
+        // Skip system fields and relations
+        case 'id':
+        case 'user_id':
+        case 'created_date':
+        case 'updated_date':
+        case 'user':
+        case 'theme':
+          break;
+        default:
+          // For any other field, use as-is
+          transformedData[key] = value;
+      }
+    });
+    
     const baker = await prisma.baker.update({
       where: { id: req.params.id },
-      data: req.body,
+      data: transformedData,
       include: {
         user: { select: { id: true, name: true, email: true } },
         theme: true
       }
     });
     
-    res.json(baker);
+    // Transform response back to snake_case for frontend
+    const responseData = {
+      id: baker.id,
+      user_id: baker.userId,
+      business_name: baker.businessName,
+      tagline: baker.tagline,
+      description: baker.description,
+      email: baker.email,
+      phone: baker.phone,
+      location: baker.location,
+      logo_url: baker.logoUrl,
+      hero_image_url: baker.heroImageUrl,
+      selected_theme_id: baker.selectedThemeId,
+      lead_time_days: baker.leadTimeDays,
+      max_orders_per_day: baker.maxOrdersPerDay,
+      deposit_percentage: baker.depositPercentage,
+      created_date: baker.createdAt,
+      updated_date: baker.updatedAt,
+      user: baker.user,
+      theme: baker.theme
+    };
+    
+    res.json(responseData);
   } catch (error) {
     next(error);
   }
@@ -140,7 +254,13 @@ router.get('/customers', async (req: AuthenticatedRequest, res, next) => {
       skip: offset
     });
     
-    res.json(customers);
+    // Transform tags from string to array for frontend compatibility
+    const transformedCustomers = customers.map(customer => ({
+      ...customer,
+      tags: customer.tags ? customer.tags.split(',').map(tag => tag.trim()) : []
+    }));
+    
+    res.json(transformedCustomers);
   } catch (error) {
     next(error);
   }
@@ -150,14 +270,24 @@ router.post('/customers', async (req: AuthenticatedRequest, res, next) => {
   try {
     const userBaker = await getUserBaker(req.user!.id);
     
+    // Transform tags from array to comma-separated string for database
+    const customerData = {
+      ...req.body,
+      bakerId: userBaker.id,
+      tags: Array.isArray(req.body.tags) ? req.body.tags.join(', ') : req.body.tags
+    };
+    
     const customer = await prisma.customer.create({
-      data: {
-        ...req.body,
-        bakerId: userBaker.id
-      }
+      data: customerData
     });
     
-    res.status(201).json(customer);
+    // Transform back to array for response
+    const responseCustomer = {
+      ...customer,
+      tags: customer.tags ? customer.tags.split(',').map(tag => tag.trim()) : []
+    };
+    
+    res.status(201).json(responseCustomer);
   } catch (error) {
     next(error);
   }
@@ -167,15 +297,27 @@ router.put('/customers/:id', async (req: AuthenticatedRequest, res, next) => {
   try {
     const userBaker = await getUserBaker(req.user!.id);
     
+    // Transform tags from array to comma-separated string for database
+    const customerData = {
+      ...req.body,
+      tags: Array.isArray(req.body.tags) ? req.body.tags.join(', ') : req.body.tags
+    };
+    
     const customer = await prisma.customer.update({
       where: { 
         id: req.params.id,
         bakerId: userBaker.id
       },
-      data: req.body
+      data: customerData
     });
     
-    res.json(customer);
+    // Transform back to array for response
+    const responseCustomer = {
+      ...customer,
+      tags: customer.tags ? customer.tags.split(',').map(tag => tag.trim()) : []
+    };
+    
+    res.json(responseCustomer);
   } catch (error) {
     next(error);
   }
@@ -291,7 +433,25 @@ router.get('/gallery', async (req: AuthenticatedRequest, res, next) => {
       skip: offset
     });
     
-    res.json(gallery);
+    // Transform field names from camelCase to snake_case for frontend compatibility
+    const transformedGallery = gallery.map(item => ({
+      id: item.id,
+      baker_id: item.bakerId,
+      title: item.title,
+      description: item.description,
+      image_url: item.imageUrl,
+      category: item.category,
+      tags: item.tags,
+      featured: item.featured,
+      price_range: item.priceRange,
+      serves_count: item.servesCount,
+      hearts_count: item.heartsCount,
+      inquiries_count: item.inquiriesCount,
+      created_at: item.createdAt,
+      updated_at: item.updatedAt
+    }));
+    
+    res.json(transformedGallery);
   } catch (error) {
     next(error);
   }
@@ -301,14 +461,45 @@ router.post('/gallery', async (req: AuthenticatedRequest, res, next) => {
   try {
     const userBaker = await getUserBaker(req.user!.id);
     
+    // Transform snake_case to camelCase for database
+    const transformedData: any = {
+      bakerId: userBaker.id
+    };
+    
+    if (req.body.title !== undefined) transformedData.title = req.body.title;
+    if (req.body.description !== undefined) transformedData.description = req.body.description;
+    if (req.body.image_url !== undefined) transformedData.imageUrl = req.body.image_url;
+    if (req.body.category !== undefined) transformedData.category = req.body.category;
+    if (req.body.tags !== undefined) transformedData.tags = req.body.tags;
+    if (req.body.featured !== undefined) transformedData.featured = req.body.featured;
+    if (req.body.price_range !== undefined) transformedData.priceRange = req.body.price_range;
+    if (req.body.serves_count !== undefined) transformedData.servesCount = req.body.serves_count;
+    if (req.body.hearts_count !== undefined) transformedData.heartsCount = req.body.hearts_count || 0;
+    if (req.body.inquiries_count !== undefined) transformedData.inquiriesCount = req.body.inquiries_count || 0;
+    
     const galleryItem = await prisma.gallery.create({
-      data: {
-        ...req.body,
-        bakerId: userBaker.id
-      }
+      data: transformedData
     });
     
-    res.status(201).json(galleryItem);
+    // Transform response back to snake_case
+    const responseData = {
+      id: galleryItem.id,
+      baker_id: galleryItem.bakerId,
+      title: galleryItem.title,
+      description: galleryItem.description,
+      image_url: galleryItem.imageUrl,
+      category: galleryItem.category,
+      tags: galleryItem.tags,
+      featured: galleryItem.featured,
+      price_range: galleryItem.priceRange,
+      serves_count: galleryItem.servesCount,
+      hearts_count: galleryItem.heartsCount,
+      inquiries_count: galleryItem.inquiriesCount,
+      created_at: galleryItem.createdAt,
+      updated_at: galleryItem.updatedAt
+    };
+    
+    res.status(201).json(responseData);
   } catch (error) {
     next(error);
   }
@@ -345,15 +536,47 @@ router.put('/gallery/:id', async (req: AuthenticatedRequest, res, next) => {
   try {
     const userBaker = await getUserBaker(req.user!.id);
     
+    // Transform snake_case to camelCase for database
+    const transformedData: any = {};
+    
+    if (req.body.title !== undefined) transformedData.title = req.body.title;
+    if (req.body.description !== undefined) transformedData.description = req.body.description;
+    if (req.body.image_url !== undefined) transformedData.imageUrl = req.body.image_url;
+    if (req.body.category !== undefined) transformedData.category = req.body.category;
+    if (req.body.tags !== undefined) transformedData.tags = req.body.tags;
+    if (req.body.featured !== undefined) transformedData.featured = req.body.featured;
+    if (req.body.price_range !== undefined) transformedData.priceRange = req.body.price_range;
+    if (req.body.serves_count !== undefined) transformedData.servesCount = req.body.serves_count;
+    if (req.body.hearts_count !== undefined) transformedData.heartsCount = req.body.hearts_count;
+    if (req.body.inquiries_count !== undefined) transformedData.inquiriesCount = req.body.inquiries_count;
+    
     const galleryItem = await prisma.gallery.update({
       where: { 
         id: req.params.id,
         bakerId: userBaker.id
       },
-      data: req.body
+      data: transformedData
     });
     
-    res.json(galleryItem);
+    // Transform response back to snake_case
+    const responseData = {
+      id: galleryItem.id,
+      baker_id: galleryItem.bakerId,
+      title: galleryItem.title,
+      description: galleryItem.description,
+      image_url: galleryItem.imageUrl,
+      category: galleryItem.category,
+      tags: galleryItem.tags,
+      featured: galleryItem.featured,
+      price_range: galleryItem.priceRange,
+      serves_count: galleryItem.servesCount,
+      hearts_count: galleryItem.heartsCount,
+      inquiries_count: galleryItem.inquiriesCount,
+      created_at: galleryItem.createdAt,
+      updated_at: galleryItem.updatedAt
+    };
+    
+    res.json(responseData);
   } catch (error) {
     next(error);
   }
@@ -447,17 +670,19 @@ router.get('/themes/:id', async (req, res, next) => {
 router.post('/themes', async (req, res, next) => {
   try {
     // Transform snake_case to camelCase for database
-    const dbData = {
-      themeName: req.body.theme_name,
-      description: req.body.description,
-      category: req.body.category,
-      cssVariables: req.body.css_variables, // Legacy field
-      lightModeVariables: req.body.light_mode_variables,
-      darkModeVariables: req.body.dark_mode_variables,
-      backgroundTextureUrl: req.body.background_texture_url,
-      isActive: req.body.is_active !== false, // default to true
-      ...req.body // Allow other fields to pass through
-    };
+    const dbData: any = {};
+    
+    // Only include transformed fields, not the original snake_case ones
+    if (req.body.theme_name !== undefined) dbData.themeName = req.body.theme_name;
+    if (req.body.description !== undefined) dbData.description = req.body.description;
+    if (req.body.category !== undefined) dbData.category = req.body.category;
+    if (req.body.css_variables !== undefined) dbData.cssVariables = req.body.css_variables;
+    if (req.body.light_mode_variables !== undefined) dbData.lightModeVariables = req.body.light_mode_variables;
+    if (req.body.dark_mode_variables !== undefined) dbData.darkModeVariables = req.body.dark_mode_variables;
+    if (req.body.background_texture_url !== undefined) dbData.backgroundTextureUrl = req.body.background_texture_url;
+    
+    // Handle is_active with default true if not specified
+    dbData.isActive = req.body.is_active !== false;
     
     const theme = await prisma.theme.create({
       data: dbData
@@ -488,17 +713,17 @@ router.post('/themes', async (req, res, next) => {
 router.put('/themes/:id', async (req, res, next) => {
   try {
     // Transform snake_case to camelCase for database
-    const dbData = {
-      themeName: req.body.theme_name,
-      description: req.body.description,
-      category: req.body.category,
-      cssVariables: req.body.css_variables, // Legacy field
-      lightModeVariables: req.body.light_mode_variables,
-      darkModeVariables: req.body.dark_mode_variables,
-      backgroundTextureUrl: req.body.background_texture_url,
-      isActive: req.body.is_active,
-      ...req.body // Allow other fields to pass through
-    };
+    const dbData: any = {};
+    
+    // Only include transformed fields, not the original snake_case ones
+    if (req.body.theme_name !== undefined) dbData.themeName = req.body.theme_name;
+    if (req.body.description !== undefined) dbData.description = req.body.description;
+    if (req.body.category !== undefined) dbData.category = req.body.category;
+    if (req.body.css_variables !== undefined) dbData.cssVariables = req.body.css_variables;
+    if (req.body.light_mode_variables !== undefined) dbData.lightModeVariables = req.body.light_mode_variables;
+    if (req.body.dark_mode_variables !== undefined) dbData.darkModeVariables = req.body.dark_mode_variables;
+    if (req.body.background_texture_url !== undefined) dbData.backgroundTextureUrl = req.body.background_texture_url;
+    if (req.body.is_active !== undefined) dbData.isActive = req.body.is_active;
     
     const theme = await prisma.theme.update({
       where: { id: req.params.id },

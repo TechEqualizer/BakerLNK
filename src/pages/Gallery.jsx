@@ -33,6 +33,7 @@ export default function Gallery() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [editingItem, setEditingItem] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -47,8 +48,46 @@ export default function Gallery() {
   const [dialogMode, setDialogMode] = useState('edit'); // 'edit' or 'upload'
 
   useEffect(() => {
+    checkAuth();
     loadGallery();
   }, []);
+  
+  const checkAuth = () => {
+    const token = localStorage.getItem('auth_token');
+    setIsAuthenticated(!!token);
+  };
+  
+  const quickLogin = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: 'elena@artisancakesstudio.com',
+          password: 'demo123'
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('user_data', JSON.stringify(data.user));
+        setIsAuthenticated(true);
+        toast.success('Logged in successfully!');
+        return true;
+      } else {
+        toast.error('Login failed');
+        return false;
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Login failed: ' + error.message);
+      return false;
+    }
+  };
 
   const loadGallery = async () => {
     setIsLoading(true);
@@ -144,6 +183,50 @@ export default function Gallery() {
     loadGallery();
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const authToken = localStorage.getItem('auth_token');
+    console.log('Gallery upload - Auth token exists:', !!authToken);
+    
+    if (!authToken) {
+      toast.error('Please login to upload images');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      console.log('Starting upload for file:', file.name, 'Type:', file.type, 'Size:', file.size);
+      
+      const response = await fetch('http://localhost:3001/api/integrations/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: formData
+      });
+
+      console.log('Upload response status:', response.status);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Upload successful:', result);
+        handleInputChange('image_url', result.url);
+        toast.success('Image uploaded successfully!');
+      } else {
+        const errorText = await response.text();
+        console.error('Upload failed:', response.status, errorText);
+        toast.error(`Upload failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image: ' + error.message);
+    }
+  };
+
   if (isLoading && gallery.length === 0) {
     return (
       <div className="p-8">
@@ -194,7 +277,11 @@ export default function Gallery() {
                     </div>
                     <div>
                       <Label htmlFor="image_url" className="text-amber-800 font-medium">Image URL *</Label>
-                      <Input id="image_url" value={formData.image_url} onChange={(e) => handleInputChange('image_url', e.target.value)} required readOnly className="border-amber-300 bg-gray-100" />
+                      <Input id="image_url" value={formData.image_url} onChange={(e) => handleInputChange('image_url', e.target.value)} required className="border-amber-300 focus:border-amber-500" placeholder="https://example.com/image.jpg or upload a file below" />
+                      <div className="mt-2">
+                        <Label className="text-amber-700 text-sm">Or upload an image:</Label>
+                        <Input type="file" accept="image/*" onChange={handleImageUpload} className="border-amber-300 mt-1" />
+                      </div>
                     </div>
                     <div>
                       <Label htmlFor="description" className="text-amber-800 font-medium">Description</Label>

@@ -21,11 +21,51 @@ export default function Settings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [currentMode, setCurrentMode] = useState('light');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
+    checkAuth();
     loadData();
     setCurrentMode(getCurrentMode());
   }, [getCurrentMode]);
+
+  const checkAuth = () => {
+    const token = localStorage.getItem('auth_token');
+    console.log('Settings page - checking auth, token found:', !!token);
+    setIsAuthenticated(!!token);
+  };
+
+  const quickLogin = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: 'elena@artisancakesstudio.com',
+          password: 'demo123'
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('user_data', JSON.stringify(data.user));
+        setIsAuthenticated(true);
+        toast.success('Logged in successfully!');
+        return true;
+      } else {
+        toast.error('Login failed');
+        return false;
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Login failed: ' + error.message);
+      return false;
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -51,14 +91,60 @@ export default function Settings() {
     }));
   };
 
+  const handleImageUpload = async (e, fieldName) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/integrations/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: formDataUpload
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        handleInputChange(fieldName, result.url);
+        toast.success(`${fieldName === 'logo_url' ? 'Logo' : 'Hero image'} uploaded successfully!`);
+        
+        // Trigger a custom event to notify other components about the update
+        window.dispatchEvent(new CustomEvent('bakerDataUpdated', { 
+          detail: { field: fieldName, value: result.url } 
+        }));
+      } else {
+        toast.error('Failed to upload image');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image');
+    }
+  };
+
   const handleBusinessSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!isAuthenticated) {
+      toast.error('Please login first to save business settings');
+      return;
+    }
+    
     setIsSaving(true);
     try {
       const dataToSave = { ...formData };
       delete dataToSave.id;
       delete dataToSave.created_date;
       delete dataToSave.updated_date;
+
+      console.log('Submitting business settings:', {
+        bakerId: baker?.id,
+        dataToSave,
+        hasAuth: !!localStorage.getItem('auth_token')
+      });
 
       if (baker) {
         await Baker.update(baker.id, dataToSave);
@@ -67,9 +153,15 @@ export default function Settings() {
       }
       toast.success("Business settings saved successfully!");
       loadData();
+      
+      // Trigger a custom event to notify other components about the update
+      window.dispatchEvent(new CustomEvent('bakerDataUpdated', { 
+        detail: { type: 'businessSettings', data: dataToSave } 
+      }));
     } catch (error) {
       console.error('Error saving business settings:', error);
-      toast.error("Failed to save business settings. Please try again.");
+      const errorMessage = error?.message || error?.error || "Failed to save business settings. Please try again.";
+      toast.error(`Failed to save: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -77,85 +169,70 @@ export default function Settings() {
 
   if (isLoading) {
     return (
-      <div 
-        className="p-8"
-        style={{
-          '--semantic-color-card-border': 'var(--semantic-color-border-subtle, #FDE68A)', // amber-200
-        }}
-      >
-        <div className="animate-pulse bg-white rounded-xl h-96 border border-[var(--semantic-color-card-border)]"></div>
+      <div className="p-8 bg-gradient-to-br from-background via-background/95 to-muted/50 min-h-screen">
+        <div className="animate-pulse bg-card rounded-xl h-96 border"></div>
       </div>
     );
   }
 
   return (
-    <div 
-      className="p-4 md:p-8 space-y-8 min-h-screen bg-gradient-to-br from-[var(--semantic-color-background-start)] to-[var(--semantic-color-background-end)]"
-      style={{
-        // Page background colors
-        '--semantic-color-background-start': 'var(--color-orange-50, #FFFBF5)',
-        '--semantic-color-background-end': 'var(--color-amber-50, #FFF9EB)',
-
-        // Text colors
-        '--semantic-color-text-primary': 'var(--color-amber-900, #654321)',
-        '--semantic-color-text-secondary': 'var(--color-amber-700, #B45309)',
-        '--semantic-color-text-muted': 'var(--color-amber-600, #D97706)',
-
-        // Icon colors
-        '--semantic-color-icon-primary': 'var(--color-amber-800, #92400E)',
-
-        // Button colors (outline variant)
-        '--semantic-color-button-outline-border': 'var(--color-amber-300, #FCD34D)',
-        '--semantic-color-button-outline-text': 'var(--color-amber-700, #B45309)',
-        '--semantic-color-button-outline-hover-bg': 'var(--color-amber-50, #FFF9EB)',
-
-        // Tabs colors
-        '--semantic-color-tabs-list-bg': 'var(--color-white-80, rgba(255, 255, 255, 0.8))',
-        '--semantic-color-tabs-list-border': 'var(--color-amber-200, #FDE68A)',
-        '--semantic-color-tabs-trigger-active-bg': 'var(--color-amber-100, #FEF3C7)',
-
-        // Card colors
-        '--semantic-color-card-bg': 'var(--color-white-80, rgba(255, 255, 255, 0.8))',
-        '--semantic-color-card-border': 'var(--color-amber-200, #FDE68A)',
-
-        // Success button colors
-        '--semantic-color-success-button-start': 'var(--color-green-500, #22C55E)',
-        '--semantic-color-success-button-end': 'var(--color-emerald-500, #10B981)',
-        '--semantic-color-success-button-hover-start': 'var(--color-green-600, #16A34A)',
-        '--semantic-color-success-button-hover-end': 'var(--color-emerald-600, #059669)',
-      }}
-    >
+    <div className="p-4 md:p-8 space-y-8 min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/50">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <SettingsIcon className="w-8 h-8 text-[var(--semantic-color-icon-primary)]" />
+          <SettingsIcon className="w-8 h-8 text-foreground" />
           <div>
-            <h1 className="text-3xl font-bold text-[var(--semantic-color-text-primary)]">Settings</h1>
-            <p className="text-[var(--semantic-color-text-secondary)] mt-1">Manage your bakery's information and appearance</p>
+            <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+            <p className="text-muted-foreground mt-1">Manage your bakery's information and appearance</p>
           </div>
         </div>
-        <Button asChild variant="outline" className="border-[var(--semantic-color-button-outline-border)] text-[var(--semantic-color-button-outline-text)] hover:bg-[var(--semantic-color-button-outline-hover-bg)] w-full md:w-auto">
-          <Link to={createPageUrl('Showcase')} className="flex items-center gap-2">
-            <Eye className="w-4 h-4" />
-            Preview Site
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline" className="w-full md:w-auto">
+            <Link to={createPageUrl('Showcase')} className="flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              Preview Site
+            </Link>
+          </Button>
+          <Button asChild className="bg-primary text-primary-foreground w-full md:w-auto">
+            <a href="/public" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              View Public URL
+            </a>
+          </Button>
+        </div>
       </div>
       
       <Tabs defaultValue="business" className="space-y-6">
-        <TabsList className="bg-[var(--semantic-color-tabs-list-bg)] border-[var(--semantic-color-tabs-list-border)] grid grid-cols-2 md:inline-grid md:grid-cols-2 h-auto">
-          <TabsTrigger value="business" className="data-[state=active]:bg-[var(--semantic-color-tabs-trigger-active-bg)] py-2">
+        <TabsList className="grid grid-cols-2 md:inline-grid md:grid-cols-2 h-auto">
+          <TabsTrigger value="business" className="py-2">
             Business Info
           </TabsTrigger>
-          <TabsTrigger value="design" className="data-[state=active]:bg-[var(--semantic-color-tabs-trigger-active-bg)] py-2">
+          <TabsTrigger value="design" className="py-2">
             <Palette className="w-4 h-4 mr-2" />
             Theme & Design
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="business" className="space-y-6">
+          {!isAuthenticated && (
+            <div className="mb-4 p-4 bg-muted/50 border border-border rounded-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-foreground font-medium">Authentication Required</p>
+                  <p className="text-xs text-muted-foreground">Please login to edit business settings</p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={quickLogin}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  Quick Login
+                </Button>
+              </div>
+            </div>
+          )}
           <form onSubmit={handleBusinessSubmit}>
             <div className="space-y-8">
-              <Card className="bg-[var(--semantic-color-card-bg)] backdrop-blur-sm border-[var(--semantic-color-card-border)] shadow-lg">
+              <Card className="bg-card/80 backdrop-blur-sm border shadow-lg">
                 <CardHeader><CardTitle>Business Information</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid md:grid-cols-2 gap-6">
@@ -189,7 +266,7 @@ export default function Settings() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-[var(--semantic-color-card-bg)] backdrop-blur-sm border-[var(--semantic-color-card-border)] shadow-lg">
+              <Card className="bg-card/80 backdrop-blur-sm border shadow-lg">
                 <CardHeader><CardTitle>Order Rules</CardTitle></CardHeader>
                 <CardContent className="grid md:grid-cols-3 gap-6">
                   <div>
@@ -207,16 +284,24 @@ export default function Settings() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-[var(--semantic-color-card-bg)] backdrop-blur-sm border-[var(--semantic-color-card-border)] shadow-lg">
+              <Card className="bg-card/80 backdrop-blur-sm border shadow-lg">
                 <CardHeader><CardTitle>Branding</CardTitle></CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-6">
                   <div>
                     <Label htmlFor="logo_url">Logo URL</Label>
-                    <Input id="logo_url" value={formData.logo_url || ''} onChange={e => handleInputChange('logo_url', e.target.value)} />
+                    <Input id="logo_url" value={formData.logo_url || ''} onChange={e => handleInputChange('logo_url', e.target.value)} placeholder="https://example.com/logo.png or upload below" />
+                    <div className="mt-2">
+                      <Label className="text-sm text-muted-foreground">Or upload a logo:</Label>
+                      <Input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo_url')} className="mt-1" />
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="hero_image_url">Hero Image URL</Label>
-                    <Input id="hero_image_url" value={formData.hero_image_url || ''} onChange={e => handleInputChange('hero_image_url', e.target.value)} />
+                    <Input id="hero_image_url" value={formData.hero_image_url || ''} onChange={e => handleInputChange('hero_image_url', e.target.value)} placeholder="https://example.com/hero.jpg or upload below" />
+                    <div className="mt-2">
+                      <Label className="text-sm text-muted-foreground">Or upload a hero image:</Label>
+                      <Input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'hero_image_url')} className="mt-1" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -224,11 +309,13 @@ export default function Settings() {
               <div className="flex justify-end">
                 <Button 
                   type="submit" 
-                  disabled={isSaving}
-                  className="bg-gradient-to-r from-[var(--semantic-color-success-button-start)] to-[var(--semantic-color-success-button-end)] hover:from-[var(--semantic-color-success-button-hover-start)] hover:to-[var(--semantic-color-success-button-hover-end)] text-white shadow-lg"
+                  disabled={isSaving || !isAuthenticated}
+                  className={`bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg ${
+                    !isAuthenticated ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {isSaving ? 'Saving...' : 'Save Business Settings'}
+                  {isSaving ? 'Saving...' : !isAuthenticated ? 'Login Required' : 'Save Business Settings'}
                 </Button>
               </div>
             </div>
