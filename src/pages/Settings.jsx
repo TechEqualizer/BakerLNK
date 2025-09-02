@@ -43,8 +43,8 @@ export default function Settings() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: 'elena@artisancakesstudio.com',
-          password: 'demo123'
+          email: 'baker@example.com',
+          password: 'password123'
         })
       });
       
@@ -443,12 +443,6 @@ export default function Settings() {
                 </div>
               )}
               
-              <Button asChild className="w-full">
-                <Link to={createPageUrl('ThemeManagerV2')}>
-                  <Wand2 className="w-4 h-4 mr-2" />
-                  Advanced Theme Manager
-                </Link>
-              </Button>
             </CardContent>
           </Card>
 

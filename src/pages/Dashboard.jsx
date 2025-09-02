@@ -4,11 +4,10 @@ import { Order, Customer } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUpRight, CakeSlice, Users, DollarSign, ListOrdered, Rocket } from 'lucide-react';
+import { ArrowUpRight, CakeSlice, Users, DollarSign, ListOrdered } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { Link } from 'react-router-dom';
 import { Toaster } from "@/components/ui/sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Dashboard() {
     const [stats, setStats] = useState({
@@ -78,21 +77,14 @@ export default function Dashboard() {
         <>
         <Toaster richColors position="top-center" />
         <div className="p-4 md:p-8 bg-gradient-to-br from-background via-background/95 to-muted/50 min-h-screen">
-          <Tabs defaultValue="main" className="w-full space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
                     <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
                     <p className="text-muted-foreground mt-1">Welcome back! Here's a snapshot of your bakery.</p>
                 </div>
-                <TabsList className="bg-card/80 backdrop-blur-sm border self-start sm:self-center">
-                    <TabsTrigger value="main">Overview</TabsTrigger>
-                    <TabsTrigger value="developer">
-                        <Rocket className="w-4 h-4 mr-2" /> Developer
-                    </TabsTrigger>
-                </TabsList>
             </div>
 
-            <TabsContent value="main" className="space-y-8 mt-0">
+            <div className="space-y-8">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   {statCards.map((card, index) => (
                       <Card key={index} className="bg-card/80 backdrop-blur-sm border shadow-lg hover:shadow-xl transition-shadow">
@@ -146,31 +138,7 @@ export default function Dashboard() {
                       </div>
                   </CardContent>
               </Card>
-            </TabsContent>
-
-            <TabsContent value="developer" className="mt-0">
-              <Card className="bg-card/80 backdrop-blur-sm border shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Rocket className="h-5 w-5 text-foreground" />
-                    Developer Tools
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground pt-2">These actions are for development and testing purposes.</p>
-                </CardHeader>
-                <CardContent>
-                    <h3 className="font-semibold text-foreground mb-2">Onboarding Wizard</h3>
-                    <p className="text-muted-foreground mb-4 text-sm">
-                        Use this button to re-trigger the 3-step onboarding flow. Note: This may create new data or redirect you away from the dashboard.
-                    </p>
-                    <Button asChild>
-                        <Link to={createPageUrl('OnboardingWizard') + '?force=true'}>
-                            Test Onboarding Flow
-                        </Link>
-                    </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+            </div>
         </div>
         </>
     );

@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Baker } from '@/api/entities';
+import { auth } from '@/lib/express-client';
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import {
     LayoutDashboard,
     CakeSlice,
@@ -14,7 +16,8 @@ import {
     Settings,
     Menu,
     X,
-    Home
+    Home,
+    LogOut
 } from 'lucide-react';
 
 const navItems = [
@@ -45,8 +48,21 @@ const NavLink = ({ item, pathname }) => {
 
 export default function Layout({ children, currentPageName }) {
     const location = useLocation();
+    const navigate = useNavigate();
     const [baker, setBaker] = useState(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    const handleLogout = async () => {
+        try {
+            await auth.logout();
+            toast.success('Logged out successfully');
+            navigate('/');
+            window.location.reload(); // Force a full reload to clear state
+        } catch (error) {
+            console.error('Logout error:', error);
+            toast.error('Failed to logout');
+        }
+    };
 
     useEffect(() => {
         const loadBakerData = () => {
@@ -111,8 +127,16 @@ export default function Layout({ children, currentPageName }) {
             <nav className="flex-1 p-4">
                 {navItems.map(item => <NavLink key={item.href} item={item} pathname={location.pathname} />)}
             </nav>
-            <div className="p-4 border-t border-border">
+            <div className="p-4 border-t border-border space-y-2">
                  <NavLink item={{ href: 'Settings', icon: Settings, label: 'Settings' }} pathname={location.pathname} />
+                 <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    onClick={handleLogout}
+                 >
+                    <LogOut className="w-5 h-5 mr-4" />
+                    <span className="font-medium">Logout</span>
+                 </Button>
             </div>
         </div>
     );

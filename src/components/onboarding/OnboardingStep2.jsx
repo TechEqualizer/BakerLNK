@@ -40,15 +40,21 @@ export default function OnboardingStep2({ data, onChange }) {
         setIsUploading(prev => ({ ...prev, [type]: true }));
         
         try {
-            const result = await UploadFile({ file });
-            if (result?.file_url) {
+            console.log('Uploading file:', file.name, file.size, file.type);
+            const result = await UploadFile(file);
+            console.log('Upload result:', result);
+            if (result?.url || result?.file_url) {
+                const fileUrl = result.url || result.file_url;
                 const field = type === 'logo' ? 'logo_url' : 'hero_image_url';
-                onChange({ [field]: result.file_url });
+                onChange({ [field]: fileUrl });
                 toast.success(`${type === 'logo' ? 'Logo' : 'Hero image'} uploaded successfully!`);
+            } else {
+                console.error('No file_url in result:', result);
+                toast.error(`Upload failed - no file URL returned`);
             }
         } catch (error) {
             console.error('Upload error:', error);
-            toast.error(`Failed to upload ${type}`);
+            toast.error(`Failed to upload ${type}: ${error.message || 'Unknown error'}`);
         } finally {
             setIsUploading(prev => ({ ...prev, [type]: false }));
         }
@@ -73,8 +79,11 @@ export default function OnboardingStep2({ data, onChange }) {
                     </Label>
                     <div className="space-y-3">
                         {data.logo_url && (
-                            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-amber-200 mx-auto">
+                            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-green-400 mx-auto relative">
                                 <img src={data.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                                <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                    <CheckCircle className="w-4 h-4 text-white" />
+                                </div>
                             </div>
                         )}
                         <Button
@@ -82,10 +91,10 @@ export default function OnboardingStep2({ data, onChange }) {
                             variant="outline"
                             onClick={() => logoInputRef.current?.click()}
                             disabled={isUploading.logo}
-                            className="w-full border-amber-300 hover:bg-amber-50"
+                            className={`w-full border-amber-300 hover:bg-amber-50 ${data.logo_url ? 'border-green-400 bg-green-50' : ''}`}
                         >
                             <Upload className="w-4 h-4 mr-2" />
-                            {isUploading.logo ? 'Uploading...' : data.logo_url ? 'Change Logo' : 'Upload Logo'}
+                            {isUploading.logo ? 'Uploading...' : data.logo_url ? '✅ Logo Uploaded' : 'Upload Logo'}
                         </Button>
                         <input
                             ref={logoInputRef}
@@ -104,8 +113,11 @@ export default function OnboardingStep2({ data, onChange }) {
                     </Label>
                     <div className="space-y-3">
                         {data.hero_image_url && (
-                            <div className="w-full h-24 rounded-lg overflow-hidden border-2 border-amber-200">
+                            <div className="w-full h-24 rounded-lg overflow-hidden border-2 border-green-400 relative">
                                 <img src={data.hero_image_url} alt="Hero" className="w-full h-full object-cover" />
+                                <div className="absolute top-2 right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                    <CheckCircle className="w-4 h-4 text-white" />
+                                </div>
                             </div>
                         )}
                         <Button
@@ -113,10 +125,10 @@ export default function OnboardingStep2({ data, onChange }) {
                             variant="outline"
                             onClick={() => heroInputRef.current?.click()}
                             disabled={isUploading.hero}
-                            className="w-full border-amber-300 hover:bg-amber-50"
+                            className={`w-full border-amber-300 hover:bg-amber-50 ${data.hero_image_url ? 'border-green-400 bg-green-50' : ''}`}
                         >
                             <Upload className="w-4 h-4 mr-2" />
-                            {isUploading.hero ? 'Uploading...' : data.hero_image_url ? 'Change Hero Image' : 'Upload Hero Image'}
+                            {isUploading.hero ? 'Uploading...' : data.hero_image_url ? '✅ Hero Image Uploaded' : 'Upload Hero Image'}
                         </Button>
                         <input
                             ref={heroInputRef}

@@ -113,7 +113,7 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-8 bg-gradient-to-br from-orange-50 to-amber-50 min-h-screen">
+    <div className="p-4 md:p-8 space-y-8 bg-gradient-to-br from-background via-background/95 to-muted/50 min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-amber-900">Order Calendar</h1>

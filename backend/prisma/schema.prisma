@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -34,6 +34,7 @@ model Baker {
   description        String?
   email              String?
   phone              String?
+  phoneNumber        String?  @map("phone_number") // For showcase display
   location           String?
   logoUrl            String?  @map("logo_url")
   heroImageUrl       String?  @map("hero_image_url")
@@ -41,6 +42,10 @@ model Baker {
   leadTimeDays       Int      @default(7) @map("lead_time_days")
   maxOrdersPerDay    Int?     @map("max_orders_per_day")
   depositPercentage  Int?     @map("deposit_percentage")
+  instagramUrl       String?  @map("instagram_url")
+  facebookUrl        String?  @map("facebook_url")
+  tiktokUrl          String?  @map("tiktok_url")
+  websiteUrl         String?  @map("website_url")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 

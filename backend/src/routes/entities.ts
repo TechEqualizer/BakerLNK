@@ -34,7 +34,8 @@ const parseQueryParams = (query: any) => {
       'created_date': 'createdAt',
       'updated_date': 'updatedAt',
       'featured': 'featured',
-      'created_at': 'createdAt'
+      'created_at': 'createdAt',
+      'theme_name': 'themeName'
     };
     
     const actualField = fieldMap[field] || field;
@@ -87,6 +88,7 @@ router.get('/bakers', async (req: AuthenticatedRequest, res, next) => {
       description: baker.description,
       email: baker.email,
       phone: baker.phone,
+      phone_number: baker.phoneNumber,
       location: baker.location,
       logo_url: baker.logoUrl,
       hero_image_url: baker.heroImageUrl,
@@ -94,6 +96,10 @@ router.get('/bakers', async (req: AuthenticatedRequest, res, next) => {
       lead_time_days: baker.leadTimeDays,
       max_orders_per_day: baker.maxOrdersPerDay,
       deposit_percentage: baker.depositPercentage,
+      instagram_url: baker.instagramUrl,
+      facebook_url: baker.facebookUrl,
+      tiktok_url: baker.tiktokUrl,
+      website_url: baker.websiteUrl,
       created_date: baker.createdAt,
       updated_date: baker.updatedAt,
       user: baker.user,
@@ -101,6 +107,74 @@ router.get('/bakers', async (req: AuthenticatedRequest, res, next) => {
     }));
     
     res.json(transformedBakers);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// CREATE Baker
+router.post('/bakers', async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const data = req.body;
+    
+    // Transform field names from snake_case to camelCase for database
+    const bakerData = {
+      userId: data.user_id || req.user!.id, // Use current user if not specified
+      businessName: data.business_name,
+      tagline: data.tagline,
+      description: data.description,
+      email: data.email,
+      phone: data.phone,
+      phoneNumber: data.phone_number,
+      location: data.location,
+      logoUrl: data.logo_url,
+      heroImageUrl: data.hero_image_url,
+      selectedThemeId: data.selected_theme_id,
+      leadTimeDays: parseInt(data.lead_time_days) || 7,
+      maxOrdersPerDay: parseInt(data.max_orders_per_day) || 3,
+      depositPercentage: parseInt(data.deposit_percentage) || 25,
+      instagramUrl: data.instagram_url,
+      facebookUrl: data.facebook_url,
+      tiktokUrl: data.tiktok_url,
+      websiteUrl: data.website_url
+    };
+
+    const baker = await prisma.baker.create({
+      data: bakerData,
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        theme: true
+      }
+    });
+
+    // Transform response back to snake_case
+    const transformedBaker = {
+      id: baker.id,
+      user_id: baker.userId,
+      business_name: baker.businessName,
+      tagline: baker.tagline,
+      description: baker.description,
+      email: baker.email,
+      phone: baker.phone,
+      phone_number: baker.phoneNumber,
+      location: baker.location,
+      logo_url: baker.logoUrl,
+      hero_image_url: baker.heroImageUrl,
+      selected_theme_id: baker.selectedThemeId,
+      lead_time_days: baker.leadTimeDays,
+      max_orders_per_day: baker.maxOrdersPerDay,
+      deposit_percentage: baker.depositPercentage,
+      instagram_url: baker.instagramUrl,
+      facebook_url: baker.facebookUrl,
+      tiktok_url: baker.tiktokUrl,
+      website_url: baker.websiteUrl,
+      created_date: baker.createdAt,
+      updated_date: baker.updatedAt,
+      user: baker.user,
+      theme: baker.theme
+    };
+
+    res.status(201).json(transformedBaker);
   } catch (error) {
     next(error);
   }
@@ -129,6 +203,7 @@ router.get('/bakers/:id', async (req, res, next) => {
       description: baker.description,
       email: baker.email,
       phone: baker.phone,
+      phone_number: baker.phoneNumber,
       location: baker.location,
       logo_url: baker.logoUrl,
       hero_image_url: baker.heroImageUrl,
@@ -136,6 +211,10 @@ router.get('/bakers/:id', async (req, res, next) => {
       lead_time_days: baker.leadTimeDays,
       max_orders_per_day: baker.maxOrdersPerDay,
       deposit_percentage: baker.depositPercentage,
+      instagram_url: baker.instagramUrl,
+      facebook_url: baker.facebookUrl,
+      tiktok_url: baker.tiktokUrl,
+      website_url: baker.websiteUrl,
       created_date: baker.createdAt,
       updated_date: baker.updatedAt,
       user: baker.user,
@@ -182,6 +261,21 @@ router.put('/bakers/:id', async (req: AuthenticatedRequest, res, next) => {
         case 'deposit_percentage':
           transformedData.depositPercentage = value;
           break;
+        case 'phone_number':
+          transformedData.phoneNumber = value;
+          break;
+        case 'instagram_url':
+          transformedData.instagramUrl = value;
+          break;
+        case 'facebook_url':
+          transformedData.facebookUrl = value;
+          break;
+        case 'tiktok_url':
+          transformedData.tiktokUrl = value;
+          break;
+        case 'website_url':
+          transformedData.websiteUrl = value;
+          break;
         // Keep fields that are already correctly named
         case 'tagline':
         case 'description':
@@ -197,6 +291,7 @@ router.put('/bakers/:id', async (req: AuthenticatedRequest, res, next) => {
         case 'updated_date':
         case 'user':
         case 'theme':
+        case 'category': // Skip category field as it's not part of Baker model
           break;
         default:
           // For any other field, use as-is
@@ -222,6 +317,7 @@ router.put('/bakers/:id', async (req: AuthenticatedRequest, res, next) => {
       description: baker.description,
       email: baker.email,
       phone: baker.phone,
+      phone_number: baker.phoneNumber,
       location: baker.location,
       logo_url: baker.logoUrl,
       hero_image_url: baker.heroImageUrl,
@@ -229,6 +325,10 @@ router.put('/bakers/:id', async (req: AuthenticatedRequest, res, next) => {
       lead_time_days: baker.leadTimeDays,
       max_orders_per_day: baker.maxOrdersPerDay,
       deposit_percentage: baker.depositPercentage,
+      instagram_url: baker.instagramUrl,
+      facebook_url: baker.facebookUrl,
+      tiktok_url: baker.tiktokUrl,
+      website_url: baker.websiteUrl,
       created_date: baker.createdAt,
       updated_date: baker.updatedAt,
       user: baker.user,
@@ -605,7 +705,7 @@ router.get('/themes', async (req, res, next) => {
     const { orderBy, limit, offset, where } = parseQueryParams(req.query);
     
     const themes = await prisma.theme.findMany({
-      where: { ...where },
+      where: { ...where, isActive: true },
       orderBy: orderBy || { themeName: 'asc' },
       take: limit,
       skip: offset
@@ -621,11 +721,10 @@ router.get('/themes', async (req, res, next) => {
       light_mode_variables: theme.lightModeVariables,
       dark_mode_variables: theme.darkModeVariables,
       background_texture_url: theme.backgroundTextureUrl,
+      preview_image_url: theme.backgroundTextureUrl || `https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop&auto=format&q=60`, // Bakery-themed fallback
       is_active: theme.isActive,
       created_at: theme.createdAt,
-      updated_at: theme.updatedAt,
-      // Include raw fields for any missing mappings
-      ...theme
+      updated_at: theme.updatedAt
     }));
     
     res.json(transformedThemes);

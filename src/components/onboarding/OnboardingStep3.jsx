@@ -133,22 +133,27 @@ Make it sound professional yet warm, like a skilled baker would describe their c
 
         for (const file of imageFiles) {
             try {
-                const result = await UploadFile({ file });
-                if (result?.file_url) {
+                console.log('Step3: Uploading file:', file.name, file.size, file.type);
+                const result = await UploadFile(file);
+                console.log('Step3: Upload result:', result);
+                if (result?.url || result?.file_url) {
+                    const fileUrl = result.url || result.file_url;
                     const imageData = {
-                        url: result.file_url,
+                        url: fileUrl,
                         title: '', // Will be filled by AI
                         description: '', // Will be filled by AI
                         category: 'specialty',
                         featured: false,
-                        tags: [],
-                        preview: URL.createObjectURL(file)
+                        tags: []
                     };
                     newImages.push(imageData);
+                } else {
+                    console.error('Step3: No file_url in result:', result);
+                    toast.error(`Upload failed for ${file.name} - no file URL returned`);
                 }
             } catch (error) {
-                console.error('Upload error:', error);
-                toast.error(`Failed to upload ${file.name}`);
+                console.error('Step3: Upload error:', error);
+                toast.error(`Failed to upload ${file.name}: ${error.message || 'Unknown error'}`);
             }
         }
 
@@ -298,10 +303,9 @@ Make it sound professional yet warm, like a skilled baker would describe their c
                             <div key={index} className="border border-amber-200 rounded-lg overflow-hidden bg-white shadow-sm">
                                 <div className="relative aspect-video">
                                     <img
-                                        src={image.preview || image.url}
+                                        src={image.url}
                                         alt={image.title}
                                         className="w-full h-full object-cover"
-                                        onLoad={() => image.preview && URL.revokeObjectURL(image.preview)}
                                     />
                                     <div className="absolute top-2 right-2 flex gap-1">
                                         {image.featured && (

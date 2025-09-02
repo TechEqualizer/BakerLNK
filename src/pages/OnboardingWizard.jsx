@@ -8,36 +8,53 @@ import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import OnboardingStep1 from '../components/onboarding/OnboardingStep1';
+import OnboardingStep1Simple from '../components/onboarding/OnboardingStep1Simple';
 import OnboardingStep2 from '../components/onboarding/OnboardingStep2';
 import OnboardingStep3 from '../components/onboarding/OnboardingStep3';
 import BakingAnimation from '../components/onboarding/BakingAnimation';
 
 export default function OnboardingWizard() {
-    const [currentStep, setCurrentStep] = useState(1);
+    const [currentStep, setCurrentStep] = useState(() => {
+        const savedStep = localStorage.getItem('onboarding_step');
+        return savedStep ? parseInt(savedStep) : 1;
+    });
     const [isCompleting, setIsCompleting] = useState(false);
     const [user, setUser] = useState(null);
-    const [wizardData, setWizardData] = useState({
-        step1: {
-            business_name: '',
-            tagline: '',
-            description: '',
-            phone: '',
-            email: '',
-            location: '',
-            lead_time_days: 7,
-            max_orders_per_day: 3,
-            deposit_percentage: 25
-        },
-        step2: {
-            logo_url: '',
-            hero_image_url: '',
-            selected_theme_id: ''
-        },
-        step3: {
-            galleryImages: []
+    // Load saved data from localStorage or use defaults
+    const getInitialWizardData = () => {
+        const saved = localStorage.getItem('onboarding_data');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error('Error parsing saved onboarding data:', e);
+            }
         }
-    });
+        return {
+            step1: {
+                business_name: '',
+                tagline: '',
+                description: '',
+                category: '',
+                email: '',
+                phone: '',
+                location: '',
+                lead_time_days: 7,
+                max_orders_per_day: 3,
+                deposit_percentage: 25
+            },
+            step2: {
+                logo_url: '',
+                hero_image_url: '',
+                selected_theme_id: ''
+            },
+            step3: {
+                galleryImages: []
+            }
+        };
+    };
+
+    const [wizardData, setWizardData] = useState(getInitialWizardData());
 
     const navigate = useNavigate();
 
@@ -52,10 +69,11 @@ export default function OnboardingWizard() {
                 const forceWizard = urlParams.get('force') === 'true';
                 
                 if (!forceWizard) {
-                    // Check if user already has baker data
-                    const existingBaker = await Baker.list();
-                    if (existingBaker.length > 0) {
-                        // User already has a baker setup, redirect to dashboard
+                    // Check if THIS user already has baker data
+                    const allBakers = await Baker.list();
+                    const userBaker = allBakers.find(baker => baker.user_id === currentUser.id);
+                    if (userBaker) {
+                        // This user already has a baker setup, redirect to dashboard
                         navigate(createPageUrl('Dashboard'));
                         return;
                     }
@@ -79,25 +97,37 @@ export default function OnboardingWizard() {
     }, [navigate]);
 
     const updateStepData = (step, data) => {
-        setWizardData(prev => ({
-            ...prev,
-            [step]: { ...prev[step], ...data }
-        }));
+        setWizardData(prev => {
+            const newData = {
+                ...prev,
+                [step]: { ...prev[step], ...data }
+            };
+            
+            // Save to localStorage for persistence
+            localStorage.setItem('onboarding_data', JSON.stringify(newData));
+            
+            return newData;
+        });
     };
 
     const nextStep = () => {
         if (currentStep < 3) {
-            setCurrentStep(currentStep + 1);
+            const newStep = currentStep + 1;
+            setCurrentStep(newStep);
+            localStorage.setItem('onboarding_step', newStep.toString());
         }
     };
 
     const prevStep = () => {
         if (currentStep > 1) {
-            setCurrentStep(currentStep - 1);
+            const newStep = currentStep - 1;
+            setCurrentStep(newStep);
+            localStorage.setItem('onboarding_step', newStep.toString());
         }
     };
 
     const completeBaking = async () => {
+        console.log('completeBaking called with data:', wizardData);
         setIsCompleting(true);
         
         try {
@@ -129,30 +159,48 @@ export default function OnboardingWizard() {
                     await Baker.create(bakerData);
                 }
             } else {
-                // Normal flow: create new baker
+                // Normal flow: create or update baker for this user
                 const bakerData = {
-                    ...wizardData.step1,
-                    ...wizardData.step2,
+                    business_name: wizardData.step1.business_name,
+                    tagline: wizardData.step1.tagline,
+                    description: wizardData.step1.description,
+                    email: wizardData.step1.email,
+                    phone: wizardData.step1.phone,
+                    location: wizardData.step1.location,
+                    logo_url: wizardData.step2.logo_url,
+                    hero_image_url: wizardData.step2.hero_image_url,
+                    selected_theme_id: wizardData.step2.selected_theme_id,
+                    user_id: user.id, // Associate baker with current user
                     lead_time_days: parseInt(wizardData.step1.lead_time_days) || 7,
                     max_orders_per_day: parseInt(wizardData.step1.max_orders_per_day) || 3,
                     deposit_percentage: parseInt(wizardData.step1.deposit_percentage) || 25
                 };
                 
-                await Baker.create(bakerData);
+                // Check if user already has a baker profile
+                const allBakers = await Baker.list();
+                const existingBaker = allBakers.find(baker => baker.user_id === user.id);
+                
+                if (existingBaker) {
+                    await Baker.update(existingBaker.id, bakerData);
+                } else {
+                    await Baker.create(bakerData);
+                }
             }
 
             // Step 2: Create Gallery items if any
             if (wizardData.step3.galleryImages.length > 0) {
-                const galleryItems = wizardData.step3.galleryImages.map(image => ({
-                    title: image.title || 'Beautiful Creation',
-                    description: image.description || 'A delightful creation from our kitchen',
-                    image_url: image.url,
-                    category: image.category || 'specialty',
-                    featured: image.featured || false,
-                    tags: image.tags || []
-                }));
-                
-                await Gallery.bulkCreate(galleryItems);
+                for (const image of wizardData.step3.galleryImages) {
+                    const galleryItem = {
+                        title: image.title || 'Beautiful Creation',
+                        description: image.description || 'A delightful creation from our kitchen',
+                        image_url: image.url,
+                        category: image.category || 'specialty',
+                        featured: image.featured || false,
+                        tags: Array.isArray(image.tags) ? image.tags.join(',') : (image.tags || '')
+                    };
+                    
+                    await Gallery.create(galleryItem);
+                }
             }
 
             // Wait for baking animation to complete (3 seconds)
@@ -160,8 +208,15 @@ export default function OnboardingWizard() {
 
             toast.success('🎉 Your bakery website is ready!');
             
-            // Redirect to showcase page
-            navigate(createPageUrl('Showcase'));
+            // Store first visit flag for celebration
+            localStorage.setItem('showCelebration', 'true');
+            
+            // Clear onboarding data after successful completion
+            localStorage.removeItem('onboarding_data');
+            localStorage.removeItem('onboarding_step');
+            
+            // Redirect to public showcase page to see their live site
+            navigate('/public');
             
         } catch (error) {
             console.error('Error completing onboarding:', error);
@@ -172,18 +227,18 @@ export default function OnboardingWizard() {
 
     const getStepTitle = () => {
         switch (currentStep) {
-            case 1: return 'Your Bakery Essentials';
-            case 2: return 'Design Your Showcase';
-            case 3: return 'Add Your Masterpieces';
+            case 1: return 'Let\'s Meet Your Bakery!';
+            case 2: return 'Pick Your Perfect Style';
+            case 3: return 'Show Off Your Best Work';
             default: return 'Getting Started';
         }
     };
 
     const getStepDescription = () => {
         switch (currentStep) {
-            case 1: return 'Tell us about your beautiful bakery business';
-            case 2: return 'Choose your style and upload your branding';
-            case 3: return 'Showcase your most stunning creations';
+            case 1: return 'Just the basics - this will only take 30 seconds!';
+            case 2: return 'Choose a theme that makes your creations shine';
+            case 3: return 'Upload 3-5 photos of your amazing work';
             default: return 'Let\'s create something amazing together';
         }
     };
@@ -217,12 +272,17 @@ export default function OnboardingWizard() {
                     {/* Progress Bar */}
                     <div className="max-w-md mx-auto mb-8">
                         <div className="flex justify-between text-sm text-amber-600 mb-2">
-                            <span className={currentStep >= 1 ? 'font-semibold' : ''}>Essentials</span>
-                            <span className={currentStep >= 2 ? 'font-semibold' : ''}>Design</span>
-                            <span className={currentStep >= 3 ? 'font-semibold' : ''}>Gallery</span>
+                            <span className={currentStep >= 1 ? 'font-semibold' : ''}>📝 Basics</span>
+                            <span className={currentStep >= 2 ? 'font-semibold' : ''}>🎨 Style</span>
+                            <span className={currentStep >= 3 ? 'font-semibold' : ''}>📸 Gallery</span>
                         </div>
                         <Progress value={progressValue} className="h-3" />
-                        <p className="text-sm text-amber-600 mt-2">Step {currentStep} of 3</p>
+                        <p className="text-sm text-amber-600 mt-2">
+                            Step {currentStep} of 3 • 
+                            {currentStep === 1 && " Almost there! Just the essentials"}
+                            {currentStep === 2 && " Looking great! Pick your style"}
+                            {currentStep === 3 && " Final step! Show your best work"}
+                        </p>
                     </div>
                 </div>
 
@@ -235,7 +295,7 @@ export default function OnboardingWizard() {
                     
                     <div className="p-8">
                         {currentStep === 1 && (
-                            <OnboardingStep1 
+                            <OnboardingStep1Simple 
                                 data={wizardData.step1}
                                 onChange={(data) => updateStepData('step1', data)}
                             />
@@ -287,7 +347,10 @@ export default function OnboardingWizard() {
                             </Button>
                         ) : (
                             <Button 
-                                onClick={completeBaking}
+                                onClick={() => {
+                                    console.log('Start Baking clicked, wizardData:', wizardData);
+                                    completeBaking();
+                                }}
                                 className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-8 font-semibold"
                             >
                                 <ChefHat className="w-4 h-4 mr-2" />

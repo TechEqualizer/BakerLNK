@@ -186,13 +186,13 @@ export default function Orders() {
     return (
         <>
             <Toaster richColors position="top-center" />
-            <div className="p-4 md:p-8 space-y-8 bg-gradient-to-br from-orange-50 to-amber-50 min-h-screen">
+            <div className="p-4 md:p-8 space-y-8 bg-gradient-to-br from-background via-background/95 to-muted/50 min-h-screen">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-8">
                     <div className="flex items-center gap-3">
-                        <CakeSlice className="w-8 h-8 text-amber-800" />
+                        <CakeSlice className="w-8 h-8 text-foreground" />
                         <div>
-                            <h1 className="text-3xl font-bold text-amber-900">Orders</h1>
-                            <p className="text-amber-700 mt-1">Manage all your cake orders</p>
+                            <h1 className="text-3xl font-bold text-foreground">Orders</h1>
+                            <p className="text-muted-foreground mt-1">Manage all your cake orders</p>
                         </div>
                     </div>
                 </div>

@@ -90,38 +90,26 @@ router.post('/signup', async (req, res, next) => {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Create user and baker profile in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          email: email.toLowerCase(),
-          passwordHash,
-          name,
-          role: 'baker'
-        }
-      });
-
-      // Create baker profile
-      const baker = await tx.baker.create({
-        data: {
-          userId: user.id,
-          businessName: businessName || name + "'s Bakery"
-        }
-      });
-
-      return { user, baker };
+    // Create user only (baker profile will be created during onboarding)
+    const user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        passwordHash,
+        name,
+        role: 'baker'
+      }
     });
 
     // Generate token
-    const token = generateToken(result.user.id);
+    const token = generateToken(user.id);
 
     res.status(201).json({
       user: {
-        id: result.user.id,
-        email: result.user.email,
-        name: result.user.name,
-        role: result.user.role,
-        created_at: result.user.createdAt.toISOString()
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        created_at: user.createdAt.toISOString()
       },
       token
     });

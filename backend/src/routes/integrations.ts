@@ -160,7 +160,7 @@ router.post('/email', async (req: AuthenticatedRequest, res, next) => {
 // LLM Integration (Mock)
 router.post('/llm', async (req: AuthenticatedRequest, res, next) => {
   try {
-    const { prompt, options = {} } = req.body;
+    const { prompt, file_urls, response_json_schema, options = {} } = req.body;
 
     if (!prompt) {
       throw createError(400, 'Prompt is required');
@@ -169,9 +169,19 @@ router.post('/llm', async (req: AuthenticatedRequest, res, next) => {
     // Simulate delay
     await new Promise(resolve => setTimeout(resolve, 1000));
 
+    // If response_json_schema is provided, return structured response
+    if (response_json_schema && response_json_schema.type === 'object') {
+      // Generate structured response for cake/dessert descriptions
+      const response = {
+        title: 'Decadent Chocolate Delight',
+        description: 'Rich chocolate layers with silky ganache frosting, adorned with fresh berries and delicate chocolate shavings. Perfect for celebrations and special moments.'
+      };
+      return res.json(response);
+    }
+
     // Mock responses based on prompt content
     let response = '';
-    const lowerPrompt = prompt.toLowerCase();
+    const lowerPrompt = (typeof prompt === 'string' ? prompt : JSON.stringify(prompt)).toLowerCase();
 
     if (lowerPrompt.includes('analyze') || lowerPrompt.includes('describe')) {
       response = 'This appears to be a beautifully crafted cake with elegant decorative elements. The composition shows attention to detail with professional presentation suitable for special occasions.';

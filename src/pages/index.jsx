@@ -20,9 +20,13 @@ import ThemeManager from "./ThemeManager";
 
 import ThemeManagerV2 from "./ThemeManagerV2";
 
+import AuthPage from "./AuthPage";
+
 import { ThemeProvider } from "../providers/ThemeProvider";
 
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+
+import { auth } from '../lib/express-client';
 
 const PAGES = {
     
@@ -61,51 +65,75 @@ function _getCurrentPage(url) {
     return pageName || Object.keys(PAGES)[0];
 }
 
+// Protected Route Component
+function ProtectedRoute({ children }) {
+    const isAuthenticated = auth.isAuthenticated();
+    
+    if (!isAuthenticated) {
+        return <Navigate to="/auth" replace />;
+    }
+    
+    return children;
+}
+
 // Create a wrapper component that uses useLocation inside the Router context
 function PagesContent() {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
-    
-    // Check if this is a public route that shouldn't have admin layout
-    const isPublicRoute = location.pathname.startsWith('/public');
-    
-    if (isPublicRoute) {
-        return (
-            <Routes>
-                <Route path="/public" element={<Showcase isPublic={true} />} />
-            </Routes>
-        );
-    }
+    const isAuthenticated = auth.isAuthenticated();
     
     return (
-        <Layout currentPageName={currentPage}>
-            <Routes>            
-                
-                    <Route path="/" element={<Gallery />} />
-                
-                
-                <Route path="/Gallery" element={<Gallery />} />
-                
-                <Route path="/Calendar" element={<Calendar />} />
-                
-                <Route path="/Settings" element={<Settings />} />
-                
-                <Route path="/Dashboard" element={<Dashboard />} />
-                
-                <Route path="/Showcase" element={<Showcase />} />
-                
-                <Route path="/Orders" element={<Orders />} />
-                
-                <Route path="/Customers" element={<Customers />} />
-                
-                <Route path="/OnboardingWizard" element={<OnboardingWizard />} />
-                
-                <Route path="/ThemeManager" element={<ThemeManager />} />
-                
-                <Route path="/ThemeManagerV2" element={<ThemeManagerV2 />} />
-                
-            </Routes>
-        </Layout>
+        <Routes>
+            {/* Auth Route */}
+            <Route 
+                path="/auth" 
+                element={
+                    isAuthenticated ? (
+                        <Navigate to="/Dashboard" replace />
+                    ) : (
+                        <AuthPage />
+                    )
+                } 
+            />
+            
+            {/* Public Routes */}
+            <Route path="/public" element={<Showcase isPublic={true} />} />
+            <Route path="/public/:slug" element={<Showcase isPublic={true} />} />
+            
+            {/* Onboarding Route - Special case for new users */}
+            <Route 
+                path="/OnboardingWizard" 
+                element={
+                    isAuthenticated ? (
+                        <OnboardingWizard />
+                    ) : (
+                        <Navigate to="/auth" replace />
+                    )
+                } 
+            />
+            
+            {/* Protected Routes */}
+            <Route path="/*" element={
+                isAuthenticated ? (
+                    <Layout currentPageName={currentPage}>
+                        <Routes>            
+                            <Route path="/" element={<Gallery />} />
+                            <Route path="/Gallery" element={<Gallery />} />
+                            <Route path="/Calendar" element={<Calendar />} />
+                            <Route path="/Settings" element={<Settings />} />
+                            <Route path="/Dashboard" element={<Dashboard />} />
+                            <Route path="/Showcase" element={<Showcase />} />
+                            <Route path="/Orders" element={<Orders />} />
+                            <Route path="/Customers" element={<Customers />} />
+                            <Route path="/ThemeManager" element={<ThemeManager />} />
+                            <Route path="/ThemeManagerV2" element={<ThemeManagerV2 />} />
+                        </Routes>
+                    </Layout>
+                ) : (
+                    <Navigate to="/auth" replace />
+                )
+            } />
+        </Routes>
     );
 }
 

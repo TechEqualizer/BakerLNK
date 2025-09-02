@@ -172,7 +172,7 @@ export default function Customers() {
     return (
         <>
             <Toaster richColors position="top-center" />
-            <div className="p-4 md:p-8 space-y-8 bg-gradient-to-br from-orange-50 to-amber-50 min-h-screen">
+            <div className="p-4 md:p-8 space-y-8 bg-gradient-to-br from-background via-background/95 to-muted/50 min-h-screen">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div className="flex items-center gap-3">
                         <Users className="w-8 h-8 text-amber-800" />
