@@ -14,11 +14,17 @@
     "db:seed": "tsx src/scripts/seed.ts",
     "seed": "npm run db:seed"
   },
-  "keywords": ["bakery", "api", "express", "typescript"],
+  "keywords": [
+    "bakery",
+    "api",
+    "express",
+    "typescript"
+  ],
   "author": "BakerLink",
   "license": "MIT",
   "dependencies": {
     "@prisma/client": "^5.19.1",
+    "@supabase/supabase-js": "^2.57.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
