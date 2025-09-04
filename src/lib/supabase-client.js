@@ -5,7 +5,9 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials not found. Using local backend.')
+  console.error('Supabase credentials not found!')
+  console.log('Expected VITE_SUPABASE_URL:', supabaseUrl)
+  console.log('Expected VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'Present' : 'Missing')
 }
 
 export const supabase = supabaseUrl && supabaseAnonKey 
