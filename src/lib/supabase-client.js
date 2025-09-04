@@ -56,15 +56,13 @@ export const api = {
     
     if (error) throw error
     
-    // Get user details
-    const { data: userData } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', data.user.id)
-      .single()
-    
+    // Return user data directly from auth
     return {
-      user: toCamelCase(userData),
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name || data.user.email
+      },
       token: data.session.access_token
     }
   },
@@ -104,14 +102,11 @@ export const api = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
     
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-    
-    if (error) throw error
-    return toCamelCase(data)
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.name || user.email
+    }
   },
 
   // Entity methods
@@ -120,11 +115,7 @@ export const api = {
     
     const { data, error } = await supabase
       .from('bakers')
-      .select(`
-        *,
-        user:users(*),
-        theme:themes(*)
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
     
     if (error) throw error
@@ -136,11 +127,7 @@ export const api = {
     
     const { data, error } = await supabase
       .from('bakers')
-      .select(`
-        *,
-        user:users(*),
-        theme:themes(*)
-      `)
+      .select('*')
       .eq('id', id)
       .single()
     
@@ -158,7 +145,9 @@ export const api = {
       .from('bakers')
       .insert([{
         ...toSnakeCase(bakerData),
-        user_id: user.id
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }])
       .select()
       .single()
