@@ -10,10 +10,13 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "deploy": "npm run build && netlify deploy --prod",
+    "deploy:preview": "npm run build && netlify deploy",
     "db:setup": "cd backend && npm run db:migrate && npm run db:seed",
     "db:reset": "cd backend && npx prisma migrate reset --force && npm run db:seed",
     "db:studio": "cd backend && npm run db:studio",
-    "setup": "npm install && cd backend && npm install"
+    "setup": "npm install",
+    "setup:full": "npm install && cd backend && npm install"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.2",
@@ -43,6 +46,7 @@
     "@radix-ui/react-toggle": "^1.1.2",
     "@radix-ui/react-toggle-group": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.8",
+    "@supabase/supabase-js": "^2.57.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",

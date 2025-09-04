@@ -1,7 +1,7 @@
-// Express Backend Client - Replaces Base44 SDK
+// Supabase-Only Client - Direct Supabase Integration
 // Maintains exact API compatibility with Base44 SDK interface
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import { api as supabaseApi } from '../supabase-client.js';
 
 class APIError extends Error {
   constructor(message, status, data) {
@@ -12,216 +12,179 @@ class APIError extends Error {
   }
 }
 
-// Generic API request handler with JWT authentication
-async function apiRequest(endpoint, options = {}) {
-  const token = localStorage.getItem('auth_token');
-  
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...(options.headers || {})
-    },
-    ...options
-  };
-
-  try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new APIError(
-        errorData.message || `HTTP ${response.status}`,
-        response.status,
-        errorData
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    if (error instanceof APIError) {
-      throw error;
-    }
-    throw new APIError(error.message || 'Network error', 0, error);
-  }
-}
-
-// Smart API request that tries public route first if not authenticated
-async function smartApiRequest(endpoint, options = {}) {
-  const token = localStorage.getItem('auth_token');
-  
-  // If no token and this is a GET request, try public route first
-  if (!token && (!options.method || options.method === 'GET')) {
-    try {
-      return await apiRequest(`/public${endpoint}`, options);
-    } catch (error) {
-      // If public route fails, fall back to regular route
-      console.log('Public route failed, trying authenticated route:', error.message);
-    }
-  }
-  
-  // Use regular authenticated route
-  return await apiRequest(endpoint, options);
-}
-
 // Entity class factory - creates CRUD operations for each entity
 function createEntity(entityName) {
-  const endpoint = `/${entityName.toLowerCase()}`;
-  
   return {
     async create(data) {
-      return await apiRequest(endpoint, {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
+      switch (entityName) {
+        case 'bakers':
+          return await supabaseApi.createBaker(data);
+        case 'gallery':
+          return await supabaseApi.createGalleryItem(data);
+        case 'orders':
+          return await supabaseApi.createOrder(data);
+        case 'customers':
+          return await supabaseApi.createCustomer(data);
+        case 'messages':
+          return await supabaseApi.createMessage(data);
+        case 'gallery-inquiries':
+          return await supabaseApi.createGalleryInquiry(data);
+        default:
+          throw new APIError(`Unknown entity: ${entityName}`, 400);
+      }
     },
 
     async list(sort = '-created_date', limit = 50) {
-      const params = new URLSearchParams();
-      if (sort) params.append('sort', sort);
-      if (limit) params.append('limit', limit.toString());
-      
-      return await smartApiRequest(`${endpoint}?${params}`);
+      switch (entityName) {
+        case 'bakers':
+          return await supabaseApi.getBakers();
+        case 'gallery':
+          return await supabaseApi.getGallery();
+        case 'themes':
+          return await supabaseApi.getThemes();
+        case 'orders':
+          return await supabaseApi.getOrders();
+        case 'customers':
+          return await supabaseApi.getCustomers();
+        case 'messages':
+          return await supabaseApi.getMessages();
+        case 'gallery-inquiries':
+          return await supabaseApi.getGalleryInquiries();
+        default:
+          throw new APIError(`Unknown entity: ${entityName}`, 400);
+      }
     },
 
     async get(id) {
-      return await smartApiRequest(`${endpoint}/${id}`);
+      switch (entityName) {
+        case 'bakers':
+          return await supabaseApi.getBaker(id);
+        case 'gallery':
+          return await supabaseApi.getGalleryItem(id);
+        case 'orders':
+          return await supabaseApi.getOrder(id);
+        case 'customers':
+          return await supabaseApi.getCustomer(id);
+        case 'themes':
+          return await supabaseApi.getTheme(id);
+        case 'messages':
+          return await supabaseApi.getMessage(id);
+        case 'gallery-inquiries':
+          return await supabaseApi.getGalleryInquiry(id);
+        default:
+          throw new APIError(`Unknown entity: ${entityName}`, 400);
+      }
     },
 
     async update(id, data) {
-      return await apiRequest(`${endpoint}/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data)
-      });
+      switch (entityName) {
+        case 'bakers':
+          return await supabaseApi.updateBaker(id, data);
+        case 'gallery':
+          return await supabaseApi.updateGalleryItem(id, data);
+        case 'orders':
+          return await supabaseApi.updateOrder(id, data);
+        case 'customers':
+          return await supabaseApi.updateCustomer(id, data);
+        case 'messages':
+          return await supabaseApi.updateMessage(id, data);
+        case 'gallery-inquiries':
+          return await supabaseApi.updateGalleryInquiry(id, data);
+        default:
+          throw new APIError(`Unknown entity: ${entityName}`, 400);
+      }
     },
 
     async delete(id) {
-      return await apiRequest(`${endpoint}/${id}`, {
-        method: 'DELETE'
-      });
+      switch (entityName) {
+        case 'bakers':
+          return await supabaseApi.deleteBaker(id);
+        case 'gallery':
+          return await supabaseApi.deleteGalleryItem(id);
+        case 'orders':
+          return await supabaseApi.deleteOrder(id);
+        case 'customers':
+          return await supabaseApi.deleteCustomer(id);
+        case 'themes':
+          return await supabaseApi.deleteTheme(id);
+        case 'messages':
+          return await supabaseApi.deleteMessage(id);
+        case 'gallery-inquiries':
+          return await supabaseApi.deleteGalleryInquiry(id);
+        default:
+          throw new APIError(`Unknown entity: ${entityName}`, 400);
+      }
     },
 
     async filter(conditions, sort = '-created_date', limit = 50) {
-      const params = new URLSearchParams();
-      
-      // Convert filter conditions to query parameters
-      Object.entries(conditions).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
-          params.append(key, value.toString());
-        }
-      });
-      
-      if (sort) params.append('sort', sort);
-      if (limit) params.append('limit', limit.toString());
-      
-      return await smartApiRequest(`${endpoint}?${params}`);
+      switch (entityName) {
+        case 'bakers':
+          return await supabaseApi.filterBakers(conditions, sort, limit);
+        case 'gallery':
+          return await supabaseApi.filterGallery(conditions, sort, limit);
+        case 'orders':
+          return await supabaseApi.filterOrders(conditions, sort, limit);
+        case 'customers':
+          return await supabaseApi.filterCustomers(conditions, sort, limit);
+        case 'messages':
+          return await supabaseApi.filterMessages(conditions, sort, limit);
+        case 'gallery-inquiries':
+          return await supabaseApi.filterGalleryInquiries(conditions, sort, limit);
+        default:
+          throw new APIError(`Unknown entity: ${entityName}`, 400);
+      }
     }
   };
 }
 
-// Authentication service
+// Authentication service - Supabase only
 const auth = {
   async login(email, password) {
-    const result = await apiRequest('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password })
-    });
-    
-    if (result.token) {
-      localStorage.setItem('auth_token', result.token);
-    }
-    
-    return result;
+    return await supabaseApi.login(email, password);
   },
 
   async signup(userData) {
-    const result = await apiRequest('/auth/signup', {
-      method: 'POST',
-      body: JSON.stringify(userData)
-    });
-    
-    if (result.token) {
-      localStorage.setItem('auth_token', result.token);
-    }
-    
-    return result;
+    return await supabaseApi.signup(userData.email, userData.password, userData.name);
   },
 
   async logout() {
-    try {
-      await apiRequest('/auth/logout', { method: 'POST' });
-    } finally {
-      localStorage.removeItem('auth_token');
-    }
+    return await supabaseApi.logout();
   },
 
   async me() {
-    return await apiRequest('/auth/me');
+    return await supabaseApi.getMe();
   },
 
-  isAuthenticated() {
-    return !!localStorage.getItem('auth_token');
+  async isAuthenticated() {
+    return await supabaseApi.isAuthenticated();
   }
 };
 
-// Integration services
+// Integration services - Supabase only
 const integrations = {
   Core: {
     async UploadFile(file, options = {}) {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      Object.entries(options).forEach(([key, value]) => {
-        formData.append(key, value);
-      });
-
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/integrations/upload`, {
-        method: 'POST',
-        headers: {
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new APIError(
-          errorData.message || `Upload failed: ${response.status}`,
-          response.status,
-          errorData
-        );
-      }
-
-      return await response.json();
+      return await supabaseApi.uploadFile(file);
     },
 
     async InvokeLLM(prompt, options = {}) {
-      return await apiRequest('/integrations/llm', {
-        method: 'POST',
-        body: JSON.stringify({ prompt, ...options })
-      });
+      // Edge function integration would go here
+      throw new APIError('LLM integration not yet implemented in Supabase', 501);
     },
 
     async SendEmail(to, subject, body, options = {}) {
-      return await apiRequest('/integrations/email', {
-        method: 'POST',
-        body: JSON.stringify({ to, subject, body, ...options })
-      });
+      // Edge function integration would go here
+      throw new APIError('Email integration not yet implemented in Supabase', 501);
     },
 
     async GenerateImage(prompt, options = {}) {
-      return await apiRequest('/integrations/generate-image', {
-        method: 'POST',
-        body: JSON.stringify({ prompt, ...options })
-      });
+      // Edge function integration would go here
+      throw new APIError('Image generation not yet implemented in Supabase', 501);
     },
 
     async ExtractDataFromUploadedFile(fileUrl, options = {}) {
-      return await apiRequest('/integrations/extract-data', {
-        method: 'POST',
-        body: JSON.stringify({ fileUrl, ...options })
-      });
+      // Edge function integration would go here
+      throw new APIError('Data extraction not yet implemented in Supabase', 501);
     }
   }
 };
@@ -248,12 +211,12 @@ export function createClient(options = {}) {
     
     // Utility methods
     async healthCheck() {
-      return await apiRequest('/health').catch(() => ({ status: 'error' }));
+      return await supabaseApi.healthCheck();
     },
 
     setApiUrl(url) {
-      // Allow dynamic API URL changes if needed
-      process.env.REACT_APP_API_URL = url;
+      // Not needed for Supabase
+      console.warn('setApiUrl is deprecated in Supabase-only mode');
     }
   };
 }

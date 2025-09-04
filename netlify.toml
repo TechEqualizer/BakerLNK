@@ -1,0 +1,35 @@
+[build]
+  base = ""
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Headers for better security and performance
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Redirects for SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = {Role = ["admin", "user"]}
+
+# API Proxy (not needed with Supabase, but keeping for reference)
+# [[redirects]]
+#   from = "/api/*"
+#   to = "https://your-api.com/api/:splat"
+#   status = 200
+#   force = true
+
+# Environment variable hints
+[template.environment]
+  VITE_SUPABASE_URL = "Your Supabase Project URL"
+  VITE_SUPABASE_ANON_KEY = "Your Supabase Anon Key"
