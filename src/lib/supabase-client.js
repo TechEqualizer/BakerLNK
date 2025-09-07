@@ -77,23 +77,66 @@ export const api = {
   async signup(email, password, name) {
     if (!supabase) throw new Error('Supabase not configured')
     
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { name }
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name }
+        }
+      })
+      
+      if (error) {
+        logger.error('Supabase signup error details:', {
+          message: error.message,
+          status: error.status,
+          code: error.code || 'unknown',
+          details: error
+        });
+        
+        // Provide more user-friendly error messages
+        if (error.message.includes('email_address_not_authorized')) {
+          throw new Error('Email domain not allowed. Please use a different email address.');
+        }
+        if (error.message.includes('signup_disabled')) {
+          throw new Error('New user registration is currently disabled.');
+        }
+        if (error.message.includes('email_not_confirmed')) {
+          throw new Error('Please check your email and click the confirmation link.');
+        }
+        if (error.message.includes('Database error saving new user')) {
+          throw new Error('Unable to create account. Please try again or contact support.');
+        }
+        
+        throw error;
       }
-    })
-    
-    if (error) throw error
-    
-    return {
-      user: {
-        id: data.user.id,
-        email: data.user.email,
-        name: name
-      },
-      token: data.session?.access_token
+      
+      // Handle the case where user is created but needs email confirmation
+      if (!data.session && data.user && !data.user.email_confirmed_at) {
+        logger.info('User created, email confirmation required');
+        return {
+          user: {
+            id: data.user.id,
+            email: data.user.email,
+            name: name,
+            needsEmailConfirmation: true
+          },
+          token: null,
+          message: 'Please check your email and click the confirmation link to complete registration.'
+        }
+      }
+      
+      return {
+        user: {
+          id: data.user?.id,
+          email: data.user?.email,
+          name: name
+        },
+        token: data.session?.access_token
+      }
+    } catch (err) {
+      logger.error('Signup process failed:', err);
+      throw err;
     }
   },
 

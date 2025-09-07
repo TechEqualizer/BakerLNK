@@ -30,6 +30,25 @@
 
 3. **Routing**: Authentication state is now properly managed with loading states.
 
+4. **Signup Error Handling**: Improved error messages for common signup issues.
+
+## 🚨 Signup Error "Database error saving new user"
+
+If you see this error, run the `database-setup.sql` script in your Supabase SQL Editor:
+
+1. Go to your Supabase dashboard
+2. Navigate to SQL Editor
+3. Copy and paste the contents of `database-setup.sql`
+4. Execute the script
+5. Try signing up again
+
+### Quick Fix for Development:
+
+In Supabase dashboard → Authentication → Settings:
+- **Disable** "Enable email confirmations" for development
+- Set "Site URL" to `http://localhost:5173`
+- Add `http://localhost:5173/**` to "Redirect URLs"
+
 ## Testing the App
 
 Without Supabase configured:

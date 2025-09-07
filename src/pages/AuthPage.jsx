@@ -33,11 +33,17 @@ export default function AuthPage() {
         // Auto-submit after generating
         setIsLoading(true);
         try {
-            await auth.signup({
+            const result = await auth.signup({
                 name: testData.name,
                 email: testData.email,
                 password: testData.password
             });
+            
+            if (result.message && result.user?.needsEmailConfirmation) {
+                toast.success('Test account created! Please check email for confirmation.');
+                return;
+            }
+            
             toast.success('Test account created! Starting onboarding...');
             navigate('/OnboardingWizard');
         } catch (error) {
@@ -75,16 +81,38 @@ export default function AuthPage() {
         setIsLoading(true);
 
         try {
-            await auth.signup({
+            const result = await auth.signup({
                 name: signupData.name,
                 email: signupData.email,
                 password: signupData.password
             });
+            
+            // Handle email confirmation required
+            if (result.message && result.user?.needsEmailConfirmation) {
+                toast.success(result.message);
+                // Don't navigate to onboarding, wait for email confirmation
+                return;
+            }
+            
             toast.success('Account created successfully!');
             navigate('/OnboardingWizard');
         } catch (error) {
             console.error('Signup error:', error);
-            toast.error(error.message || 'Failed to create account');
+            
+            // Show more helpful error messages
+            let errorMessage = 'Failed to create account';
+            if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            // Special handling for common errors
+            if (error.message?.includes('Password should be at least 6 characters')) {
+                errorMessage = 'Password must be at least 6 characters long';
+            } else if (error.message?.includes('User already registered')) {
+                errorMessage = 'An account with this email already exists. Try logging in instead.';
+            }
+            
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }
