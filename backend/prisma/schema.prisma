@@ -33,8 +33,7 @@ model Baker {
   tagline            String?
   description        String?
   email              String?
-  phone              String?
-  phoneNumber        String?  @map("phone_number") // For showcase display
+  phoneNumber        String?  @map("phone_number")
   location           String?
   logoUrl            String?  @map("logo_url")
   heroImageUrl       String?  @map("hero_image_url")
