@@ -1,16 +1,21 @@
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/utils/logger'
 
 // Initialize Supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Supabase credentials not found!')
-  console.log('Expected VITE_SUPABASE_URL:', supabaseUrl)
-  console.log('Expected VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'Present' : 'Missing')
+if (!supabaseUrl || !supabaseAnonKey || 
+    supabaseUrl === 'your_supabase_project_url_here' || 
+    supabaseAnonKey === 'your_supabase_anon_key_here') {
+  logger.warn('⚠️ Supabase credentials not configured!')
+  logger.warn('Please update your .env file with your Supabase project credentials.')
+  logger.warn('You can get these from: https://app.supabase.com/project/_/settings/api')
 }
 
-export const supabase = supabaseUrl && supabaseAnonKey 
+export const supabase = supabaseUrl && supabaseAnonKey && 
+  supabaseUrl !== 'your_supabase_project_url_here' && 
+  supabaseAnonKey !== 'your_supabase_anon_key_here'
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,

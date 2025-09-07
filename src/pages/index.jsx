@@ -1,30 +1,23 @@
+import { lazy, Suspense } from 'react';
 import Layout from "./Layout.jsx";
 
-import Gallery from "./Gallery";
-
-import Calendar from "./Calendar";
-
-import Settings from "./Settings";
-
-import Dashboard from "./Dashboard";
-
-import Showcase from "./Showcase";
-
-import Orders from "./Orders";
-
-import Customers from "./Customers";
-
-import OnboardingWizard from "./OnboardingWizard";
-
-import ThemeManager from "./ThemeManager";
-
-import ThemeManagerV2 from "./ThemeManagerV2";
-
-import AuthPage from "./AuthPage";
+// Lazy load all page components for code splitting
+const Gallery = lazy(() => import("./Gallery"));
+const Calendar = lazy(() => import("./Calendar"));
+const Settings = lazy(() => import("./Settings"));
+const Dashboard = lazy(() => import("./Dashboard"));
+const Showcase = lazy(() => import("./Showcase"));
+const Orders = lazy(() => import("./Orders"));
+const Customers = lazy(() => import("./Customers"));
+const OnboardingWizard = lazy(() => import("./OnboardingWizard"));
+const ThemeManager = lazy(() => import("./ThemeManager"));
+const ThemeManagerV2 = lazy(() => import("./ThemeManagerV2"));
+const AuthPage = lazy(() => import("./AuthPage"));
 
 import { ThemeProvider } from "../providers/ThemeProvider";
 
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 
 import { auth } from '../lib/express-client';
 
@@ -65,22 +58,42 @@ function _getCurrentPage(url) {
     return pageName || Object.keys(PAGES)[0];
 }
 
-// Protected Route Component
-function ProtectedRoute({ children }) {
-    const isAuthenticated = auth.isAuthenticated();
-    
-    if (!isAuthenticated) {
-        return <Navigate to="/auth" replace />;
-    }
-    
-    return children;
+// Loading component for lazy loaded routes
+function PageLoader() {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+    );
 }
 
 // Create a wrapper component that uses useLocation inside the Router context
 function PagesContent() {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
-    const isAuthenticated = auth.isAuthenticated();
+    const [isAuthenticated, setIsAuthenticated] = useState(null); // null = loading
+    
+    useEffect(() => {
+        // Check authentication status on mount and location changes
+        const checkAuth = async () => {
+            try {
+                const authenticated = await auth.isAuthenticated();
+                setIsAuthenticated(authenticated);
+            } catch (error) {
+                console.error('Auth check error:', error);
+                setIsAuthenticated(false);
+            }
+        };
+        
+        checkAuth();
+    }, [location]);
+    
+    // Show loading state while checking auth
+    if (isAuthenticated === null) {
+        return <div className="flex items-center justify-center h-screen">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>;
+    }
     
     return (
         <Routes>
@@ -91,21 +104,33 @@ function PagesContent() {
                     isAuthenticated ? (
                         <Navigate to="/Dashboard" replace />
                     ) : (
-                        <AuthPage />
+                        <Suspense fallback={<PageLoader />}>
+                            <AuthPage />
+                        </Suspense>
                     )
                 } 
             />
             
             {/* Public Routes */}
-            <Route path="/public" element={<Showcase isPublic={true} />} />
-            <Route path="/public/:slug" element={<Showcase isPublic={true} />} />
+            <Route path="/public" element={
+                <Suspense fallback={<PageLoader />}>
+                    <Showcase isPublic={true} />
+                </Suspense>
+            } />
+            <Route path="/public/:slug" element={
+                <Suspense fallback={<PageLoader />}>
+                    <Showcase isPublic={true} />
+                </Suspense>
+            } />
             
             {/* Onboarding Route - Special case for new users */}
             <Route 
                 path="/OnboardingWizard" 
                 element={
                     isAuthenticated ? (
-                        <OnboardingWizard />
+                        <Suspense fallback={<PageLoader />}>
+                            <OnboardingWizard />
+                        </Suspense>
                     ) : (
                         <Navigate to="/auth" replace />
                     )
@@ -116,18 +141,20 @@ function PagesContent() {
             <Route path="/*" element={
                 isAuthenticated ? (
                     <Layout currentPageName={currentPage}>
-                        <Routes>            
-                            <Route path="/" element={<Gallery />} />
-                            <Route path="/Gallery" element={<Gallery />} />
-                            <Route path="/Calendar" element={<Calendar />} />
-                            <Route path="/Settings" element={<Settings />} />
-                            <Route path="/Dashboard" element={<Dashboard />} />
-                            <Route path="/Showcase" element={<Showcase />} />
-                            <Route path="/Orders" element={<Orders />} />
-                            <Route path="/Customers" element={<Customers />} />
-                            <Route path="/ThemeManager" element={<ThemeManager />} />
-                            <Route path="/ThemeManagerV2" element={<ThemeManagerV2 />} />
-                        </Routes>
+                        <Suspense fallback={<PageLoader />}>
+                            <Routes>            
+                                <Route path="/" element={<Gallery />} />
+                                <Route path="/Gallery" element={<Gallery />} />
+                                <Route path="/Calendar" element={<Calendar />} />
+                                <Route path="/Settings" element={<Settings />} />
+                                <Route path="/Dashboard" element={<Dashboard />} />
+                                <Route path="/Showcase" element={<Showcase />} />
+                                <Route path="/Orders" element={<Orders />} />
+                                <Route path="/Customers" element={<Customers />} />
+                                <Route path="/ThemeManager" element={<ThemeManager />} />
+                                <Route path="/ThemeManagerV2" element={<ThemeManagerV2 />} />
+                            </Routes>
+                        </Suspense>
                     </Layout>
                 ) : (
                     <Navigate to="/auth" replace />
