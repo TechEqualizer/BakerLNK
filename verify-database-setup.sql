@@ -48,8 +48,8 @@ SELECT
 SELECT 'Table Counts:' as info;
 SELECT 
     schemaname,
-    tablename,
+    relname as tablename,
     n_tup_ins as rows_inserted
 FROM pg_stat_user_tables 
 WHERE schemaname = 'public'
-ORDER BY tablename;
+ORDER BY relname;
