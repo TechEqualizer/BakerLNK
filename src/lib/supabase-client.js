@@ -87,12 +87,15 @@ export const api = {
       })
       
       if (error) {
-        logger.error('Supabase signup error details:', {
+        logger.error('🚨 SUPABASE SIGNUP ERROR - Full Details:', {
           message: error.message,
           status: error.status,
           code: error.code || 'unknown',
           details: error
         });
+        
+        // Show the REAL error in console for debugging
+        console.error('🚨 REAL SUPABASE ERROR:', error);
         
         // Provide more user-friendly error messages
         if (error.message.includes('email_address_not_authorized')) {
@@ -105,10 +108,14 @@ export const api = {
           throw new Error('Please check your email and click the confirmation link.');
         }
         if (error.message.includes('Database error saving new user')) {
-          throw new Error('Unable to create account. Please try again or contact support.');
+          throw new Error(`Database Setup Required: ${error.message}. Please run the SQL setup script in your Supabase dashboard.`);
+        }
+        if (error.message.includes('relation') && error.message.includes('does not exist')) {
+          throw new Error(`Database Tables Missing: The required tables don't exist. Please run apply-supabase-migrations.sql in your Supabase SQL Editor.`);
         }
         
-        throw error;
+        // For any other error, show the actual message for debugging
+        throw new Error(`Signup failed: ${error.message}`);
       }
       
       // Handle the case where user is created but needs email confirmation
