@@ -215,17 +215,17 @@ CREATE POLICY "Anyone can view bakers"
 DROP POLICY IF EXISTS "Users can create their baker profile" ON public.bakers;
 CREATE POLICY "Users can create their baker profile"
     ON public.bakers FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
+    WITH CHECK (auth.uid()::uuid = user_id);
 
 DROP POLICY IF EXISTS "Users can update their baker profile" ON public.bakers;
 CREATE POLICY "Users can update their baker profile"
     ON public.bakers FOR UPDATE
-    USING (auth.uid() = user_id);
+    USING (auth.uid()::uuid = user_id);
 
 DROP POLICY IF EXISTS "Users can delete their baker profile" ON public.bakers;
 CREATE POLICY "Users can delete their baker profile"
     ON public.bakers FOR DELETE
-    USING (auth.uid() = user_id);
+    USING (auth.uid()::uuid = user_id);
 
 -- Customers policies (bakers can manage their customers)
 DROP POLICY IF EXISTS "Bakers can view their customers" ON public.customers;
@@ -233,7 +233,7 @@ CREATE POLICY "Bakers can view their customers"
     ON public.customers FOR SELECT
     USING (
         baker_id IN (
-            SELECT id FROM public.bakers WHERE user_id = auth.uid()
+            SELECT id FROM public.bakers WHERE user_id = auth.uid()::uuid
         )
     );
 
@@ -242,7 +242,7 @@ CREATE POLICY "Bakers can create customers"
     ON public.customers FOR INSERT
     WITH CHECK (
         baker_id IN (
-            SELECT id FROM public.bakers WHERE user_id = auth.uid()
+            SELECT id FROM public.bakers WHERE user_id = auth.uid()::uuid
         )
     );
 
@@ -251,7 +251,7 @@ CREATE POLICY "Bakers can update their customers"
     ON public.customers FOR UPDATE
     USING (
         baker_id IN (
-            SELECT id FROM public.bakers WHERE user_id = auth.uid()
+            SELECT id FROM public.bakers WHERE user_id = auth.uid()::uuid
         )
     );
 
@@ -260,7 +260,7 @@ CREATE POLICY "Bakers can delete their customers"
     ON public.customers FOR DELETE
     USING (
         baker_id IN (
-            SELECT id FROM public.bakers WHERE user_id = auth.uid()
+            SELECT id FROM public.bakers WHERE user_id = auth.uid()::uuid
         )
     );
 
@@ -275,7 +275,7 @@ CREATE POLICY "Bakers can create gallery items"
     ON public.gallery FOR INSERT
     WITH CHECK (
         baker_id IN (
-            SELECT id FROM public.bakers WHERE user_id = auth.uid()
+            SELECT id FROM public.bakers WHERE user_id = auth.uid()::uuid
         )
     );
 
@@ -284,7 +284,7 @@ CREATE POLICY "Bakers can update their gallery items"
     ON public.gallery FOR UPDATE
     USING (
         baker_id IN (
-            SELECT id FROM public.bakers WHERE user_id = auth.uid()
+            SELECT id FROM public.bakers WHERE user_id = auth.uid()::uuid
         )
     );
 
@@ -293,7 +293,7 @@ CREATE POLICY "Bakers can delete their gallery items"
     ON public.gallery FOR DELETE
     USING (
         baker_id IN (
-            SELECT id FROM public.bakers WHERE user_id = auth.uid()
+            SELECT id FROM public.bakers WHERE user_id = auth.uid()::uuid
         )
     );
 
@@ -301,33 +301,33 @@ CREATE POLICY "Bakers can delete their gallery items"
 DROP POLICY IF EXISTS "Users can view their gallery inquiries" ON public.gallery_inquiries;
 CREATE POLICY "Users can view their gallery inquiries"
     ON public.gallery_inquiries FOR SELECT
-    USING (auth.uid() = user_id);
+    USING (auth.uid()::uuid = user_id);
 
 DROP POLICY IF EXISTS "Users can create gallery inquiries" ON public.gallery_inquiries;
 CREATE POLICY "Users can create gallery inquiries"
     ON public.gallery_inquiries FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
+    WITH CHECK (auth.uid()::uuid = user_id);
 
 DROP POLICY IF EXISTS "Users can delete their gallery inquiries" ON public.gallery_inquiries;
 CREATE POLICY "Users can delete their gallery inquiries"
     ON public.gallery_inquiries FOR DELETE
-    USING (auth.uid() = user_id);
+    USING (auth.uid()::uuid = user_id);
 
 -- Files policies (users manage their uploads)
 DROP POLICY IF EXISTS "Users can view their files" ON public.files;
 CREATE POLICY "Users can view their files"
     ON public.files FOR SELECT
-    USING (auth.uid() = uploaded_by);
+    USING (auth.uid()::uuid = uploaded_by);
 
 DROP POLICY IF EXISTS "Users can create files" ON public.files;
 CREATE POLICY "Users can create files"
     ON public.files FOR INSERT
-    WITH CHECK (auth.uid() = uploaded_by);
+    WITH CHECK (auth.uid()::uuid = uploaded_by);
 
 DROP POLICY IF EXISTS "Users can delete their files" ON public.files;
 CREATE POLICY "Users can delete their files"
     ON public.files FOR DELETE
-    USING (auth.uid() = uploaded_by);
+    USING (auth.uid()::uuid = uploaded_by);
 
 -- ===========================================
 -- STEP 4: INSERT SAMPLE DATA

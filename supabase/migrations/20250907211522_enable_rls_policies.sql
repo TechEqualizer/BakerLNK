@@ -23,15 +23,15 @@ CREATE POLICY "Anyone can view bakers"
 
 CREATE POLICY "Users can create their baker profile"
     ON public.bakers FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
+    WITH CHECK (auth.uid()::uuid = user_id);
 
 CREATE POLICY "Users can update their baker profile"
     ON public.bakers FOR UPDATE
-    USING (auth.uid() = user_id);
+    USING (auth.uid()::uuid = user_id);
 
 CREATE POLICY "Users can delete their baker profile"
     ON public.bakers FOR DELETE
-    USING (auth.uid() = user_id);
+    USING (auth.uid()::uuid = user_id);
 
 -- Customers policies (bakers can manage their customers)
 CREATE POLICY "Bakers can view their customers"
