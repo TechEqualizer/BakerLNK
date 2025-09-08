@@ -24,7 +24,7 @@ export default function AuthPage() {
         const randomId = Math.floor(Math.random() * 9999);
         const testData = {
             name: `Test Baker ${randomId}`,
-            email: `testbaker${randomId}@example.com`,
+            email: `testbaker${randomId}@gmail.com`,
             password: 'test123',
             confirmPassword: 'test123'
         };
