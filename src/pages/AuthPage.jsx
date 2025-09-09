@@ -89,7 +89,11 @@ export default function AuthPage() {
             
             // Handle email confirmation required
             if (result.message && result.user?.needsEmailConfirmation) {
-                toast.success(result.message);
+                toast.success('Account created! Please check your email to confirm your account before logging in.', {
+                    duration: 8000
+                });
+                // Show helpful message
+                console.log('✅ User created but needs email confirmation');
                 // Don't navigate to onboarding, wait for email confirmation
                 return;
             }
